@@ -92,7 +92,9 @@ Auto-detection has to tell apart cards that share the I/O area: a SwiftLink at $
 
 ## Publishing
 
-`.woodpecker.yaml`: on a tag `vX.Y.Z` (the same as `src/version.h` and `metadata.json`), `scripts/ci-release.sh` makes the Gitea release with `warp64u-<version>.prg` and `RELEASE_NOTES.md`, and publishes it to the WarpEngine of teletypegames.org (platform `c64`, `shelf_name` `WARP64U`) like every other C64 title, with the browser and native players `commodore-pack` builds around it (the `package` step, in the `commodore-player` image), so WARP64U is on its own shelf and can update itself: installing it over the running copy replaces the file on the disk; start it again.
+Like every other C64 title of Teletype Games: `.woodpecker/warp.yaml` is a `platform: c64` marker, and the WarpEngine of teletypegames.org serves the pipeline. `build: make` makes its build step run `make warp64u.prg` (cc65, in the `c64-builder` image) instead of assembling `main.asm` with ACME; the rest is the same: `commodore-pack` builds the browser and native players around the PRG, and the version in `metadata.json` (keep `src/version.h` the same) is uploaded and published on a push to master. The C64 shelf then serves it as `WARP64U.PRG`, so WARP64U can update itself: installing it over the running copy replaces the file on the disk; start it again.
+
+`.woodpecker/test.yaml`, the host tests, runs next to it.
 
 ## License
 

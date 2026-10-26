@@ -1,6 +1,7 @@
 # WARP64U: build the C64 program, and run the host tests.
 #
 #   make          build/warp64u.prg and build/warp64u.d64 (cc65, ip65 from vendor/)
+#   make warp64u.prg   the PRG where the WarpEngine c64 pipeline (build: make) wants it
 #   make test     the host tests (scripts/ci-test.sh)
 #   make vice     start it in VICE from the disk image
 #   make clean
@@ -28,6 +29,9 @@ build/warp64u.prg: $(SOURCES) src/*.h $(IP65LIB) $(DRIVERLIB)
 	mkdir -p build
 	$(CL65) -t c64 -O -I $(IP65)/inc -m build/warp64u.map -o $@ $(SOURCES) $(IP65LIB) $(DRIVERLIB)
 
+warp64u.prg: build/warp64u.prg
+	cp build/warp64u.prg $@
+
 build/warp64u.d64: build/warp64u.prg
 	rm -f $@
 	$(C1541) -format "warp64u,64" d64 $@ -write build/warp64u.prg warp64u >/dev/null
@@ -39,6 +43,6 @@ vice: build/warp64u.d64
 	x64sc -autostart build/warp64u.d64
 
 clean:
-	rm -rf build
+	rm -rf build warp64u.prg
 	$(MAKE) -C $(IP65)/ip65 clean
 	$(MAKE) -C $(IP65)/drivers clean

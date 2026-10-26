@@ -1,0 +1,4 @@
+# The CI pipeline is served by the update server: GET /build/config?platform=c64
+# build: make — the build step runs `make warp64u.prg` (cc65) instead of ACME.
+platform: c64
+build: make
