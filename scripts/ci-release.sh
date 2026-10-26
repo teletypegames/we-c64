@@ -1,8 +1,9 @@
 #!/bin/sh
 # On a tag: check that the tag, src/version.h and metadata.json say the same
 # version, then make the Gitea release (RELEASE_NOTES.md as its text) with
-# warp64u-<version>.prg, and publish the same file to the WarpEngine of
-# teletypegames.org (platform c64), which puts it on the C64 shelf.
+# warp64u-<version>.prg, and publish it to the WarpEngine of teletypegames.org
+# (platform c64), which puts it on the C64 shelf, together with the players the
+# package step (commodore-pack) built around it.
 #
 #   GITEA_TOKEN=... UPDATE_SECRET=... CI_COMMIT_TAG=v0.1.0 CI_REPO=stores/warp64u scripts/ci-release.sh
 set -eu
@@ -19,10 +20,8 @@ HEADER_VERSION="$(sed -n 's/.*WARP64U_VERSION "\(.*\)".*/\1/p' src/version.h)"
 META_VERSION="$(jq -r .version metadata.json)"
 [ "$HEADER_VERSION" = "$VERSION" ] || die "src/version.h says $HEADER_VERSION, the tag $TAG"
 [ "$META_VERSION" = "$VERSION" ] || die "metadata.json says $META_VERSION, the tag $TAG"
-[ -f build/warp64u.prg ] || die "no build/warp64u.prg"
-
 PRG="warp64u-$VERSION.prg"
-cp build/warp64u.prg "$PRG"
+[ -f "$PRG" ] || cp build/warp64u.prg "$PRG" || die "no build/warp64u.prg"
 cp metadata.json "warp64u-$VERSION.metadata.json"
 
 if [ -n "${GITEA_TOKEN:-}" ]; then
@@ -44,7 +43,9 @@ else
 fi
 
 : "${UPDATE_SECRET:?the WarpEngine application token}"
-for f in "$PRG" "warp64u-$VERSION.metadata.json"; do
+for f in "$PRG" "warp64u-$VERSION.metadata.json" "warp64u-$VERSION.html.zip" \
+         "warp64u-$VERSION-linux-x64.zip" "warp64u-$VERSION-win-x64.zip" "warp64u-$VERSION-mac-arm64.zip"; do
+  [ -f "$f" ] || die "no $f"
   curl -fsS -H "X-Update-Secret: $UPDATE_SECRET" -F "file=@$f" "$UPDATE_SERVER/build/upload?name=warp64u&version=$VERSION" >/dev/null
 done
 curl -fsS -X POST -H "X-Update-Secret: $UPDATE_SECRET" "$UPDATE_SERVER/build/publish?name=warp64u&platform=c64&version=$VERSION" >/dev/null

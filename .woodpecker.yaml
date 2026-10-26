@@ -5,7 +5,8 @@
 # HTTP server and a folder for a disk) and the C64 build. A tag (vX.Y.Z, the same as
 # src/version.h and metadata.json) also makes the Gitea release with
 # warp64u-<version>.prg and publishes it to the WarpEngine of teletypegames.org
-# (platform c64), which puts it on the C64 shelf as WARP64U.PRG.
+# (platform c64) like every other C64 title: the PRG, which the C64 shelf serves as
+# WARP64U.PRG, and the browser and native players commodore-pack builds around it.
 when:
   - event: [push, manual]
     branch: master
@@ -20,6 +21,16 @@ steps:
       - sh scripts/ci-test.sh
       - make build/warp64u.prg
       - ls -l build/warp64u.prg
+
+  - name: package
+    image: git.teletypegames.org/build/commodore-player:latest
+    pull: true
+    commands:
+      - VERSION="${CI_COMMIT_TAG#v}"
+      - cp build/warp64u.prg "warp64u-$VERSION.prg"
+      - commodore-pack c64 warp64u "$VERSION"
+    when:
+      - event: tag
 
   - name: release
     # curl, jq and git are in the image (services/teletypegames ci/ci-tools.Dockerfile); by digest,
