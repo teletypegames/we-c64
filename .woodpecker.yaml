@@ -1,0 +1,36 @@
+# Not the WarpEngine-generated c64 pipeline (that one assembles with ACME): WARP64U is
+# C, built with cc65 and ip65 (vendor/ip65).
+#
+# Every event: the host tests (scripts/ci-test.sh: the portable layers against a small
+# HTTP server and a folder for a disk) and the C64 build. A tag (vX.Y.Z, the same as
+# src/version.h and metadata.json) also makes the Gitea release with
+# warp64u-<version>.prg and publishes it to the WarpEngine of teletypegames.org
+# (platform c64), which puts it on the C64 shelf as WARP64U.PRG.
+when:
+  - event: [push, manual]
+    branch: master
+  - event: pull_request
+  - event: tag
+
+steps:
+  - name: test
+    image: debian:bookworm-slim
+    commands:
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends gcc libc6-dev make python3 cc65 >/dev/null
+      - sh scripts/ci-test.sh
+      - make build/warp64u.prg
+      - ls -l build/warp64u.prg
+
+  - name: release
+    # curl, jq and git are in the image (services/teletypegames ci/ci-tools.Dockerfile); by digest,
+    # since the step gets tokens
+    image: git.teletypegames.org/build/ci-tools@sha256:4f03160226e51bdf67b850f21a9fbeab7314127766979f72e514efb5ef4dcba8
+    environment:
+      GITEA_TOKEN:
+        from_secret: gitea_token
+      UPDATE_SECRET:
+        from_secret: application_token
+    commands:
+      - sh scripts/ci-release.sh
+    when:
+      - event: tag

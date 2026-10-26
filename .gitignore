@@ -1,0 +1,6 @@
+build/
+*.o
+*.lib
+vendor/ip65/**/*.o
+vendor/ip65/**/*.lib
+.DS_Store
