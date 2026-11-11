@@ -13,7 +13,7 @@ IP65LIB = $(IP65)/ip65/ip65_tcp.lib
 DRIVERLIB = $(IP65)/drivers/ip65_c64.lib
 
 SOURCES = src/main.c src/store.c src/http.c src/shelf.c src/config.c src/crc32.c src/text.c \
-          src/disk_cbm.c src/net_uci.c src/net_ip65.c src/net_modem.c
+          src/disk_cbm.c src/net_uci.c src/net_ip65.c src/net_modem.c src/preview.c
 
 .PHONY: all test vice clean
 
@@ -27,7 +27,7 @@ $(DRIVERLIB):
 
 build/warp64u.prg: $(SOURCES) src/*.h $(IP65LIB) $(DRIVERLIB)
 	mkdir -p build
-	$(CL65) -t c64 -O -I $(IP65)/inc -m build/warp64u.map -o $@ $(SOURCES) $(IP65LIB) $(DRIVERLIB)
+	$(CL65) -t c64 -O -I $(IP65)/inc -Wl -D,__STACKSIZE__=0x600 -m build/warp64u.map -o $@ $(SOURCES) $(IP65LIB) $(DRIVERLIB)
 
 warp64u.prg: build/warp64u.prg
 	cp build/warp64u.prg $@

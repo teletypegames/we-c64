@@ -11,11 +11,10 @@ void shelf_clear(Shelf *shelf)
 
 static void take_line(Shelf *shelf)
 {
-    ShelfEntry entry;
     shelf->line[shelf->line_length] = 0;
     if (shelf->line_length == 0 || shelf->line[0] == ASCII_HASH) return;
-    if (shelf->count < SHELF_MAX && shelf_parse_line(shelf->line, &entry))
-        shelf->entries[shelf->count++] = entry;
+    if (shelf->count < SHELF_MAX && shelf_parse_line(shelf->line, &shelf->entries[shelf->count]))
+        ++shelf->count;
     else
         ++shelf->skipped;
 }
@@ -82,7 +81,7 @@ int shelf_parse_line(const char *line, ShelfEntry *entry)
 {
     char number[12];
     const char *p = line;
-    char author[2];
+    char preview[2];
     p = field(p, entry->file, SHELF_FILE_MAX);
     p = field(p, entry->version, SHELF_VERSION_MAX);
     p = field(p, number, sizeof number - 1);
@@ -90,8 +89,11 @@ int shelf_parse_line(const char *line, ShelfEntry *entry)
     p = field(p, number, sizeof number - 1);
     if (!parse_number(number, &entry->crc32, 16)) return 0;
     p = field(p, entry->title, SHELF_TITLE_MAX);
-    p = field(p, author, 0);
-    field(p, entry->description, SHELF_DESC_MAX);
+    p = field(p, entry->author, SHELF_AUTHOR_MAX);
+    p = field(p, entry->description, SHELF_DESC_MAX);
+    p = field(p, entry->category, SHELF_CATEGORY_MAX);
+    field(p, preview, 1);
+    entry->preview = preview[0] != 0;
     if (!valid_file(entry->file) || !entry->version[0]) return 0;
     if (!entry->title[0]) strcpy(entry->title, entry->file);
     return 1;
@@ -127,7 +129,7 @@ void shelf_format_line(const ShelfEntry *entry, char *line)
     p = put_number(p, entry->size, 10);
     p = put_number(p, entry->crc32, 16);
     p = put_text(p, entry->title);
-    *p++ = ASCII_BAR;
+    p = put_text(p, entry->author);
     p = put_text(p, entry->description);
     p[-1] = ASCII_LF;
     *p = 0;

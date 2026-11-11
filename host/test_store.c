@@ -116,6 +116,15 @@ static void test_shelf_lines(void)
     CHECK(shelf_parse_line("ARIADNE.PRG|1.1.0|10561|e6d8fe00|Thread of Ariadne|Teletype Games|Co-op.", &entry) &&
           entry.size == 10561 && entry.crc32 == 0xe6d8fe00UL && strcmp(entry.title, "Thread of Ariadne") == 0,
           "a line of INDEX.TXT");
+    CHECK(entry.category[0] == 0 && !entry.preview && strcmp(entry.author, "Teletype Games") == 0,
+          "a version 1 line: the author, no category, no preview");
+    CHECK(shelf_parse_line("TRICKSTER-TI.PRG|1.0.0|6593|c4e6bb9f|Trickster Tiles C64|Teletype Games|Hop.|tool|TRICKSTER-TI.PVW",
+                           &entry) && strcmp(entry.description, "Hop.") == 0 && strcmp(entry.category, "tool") == 0 && entry.preview,
+          "a version 2 line: the category and the preview");
+    CHECK(shelf_parse_line("A.PRG|1|1|00000000|x|y|z||", &entry) && entry.category[0] == 0 && !entry.preview,
+          "a version 2 line without category and preview");
+    CHECK(shelf_parse_line("A.PRG|1|1|00000000|A title of more than thirty-two characters|y|z|game|", &entry) &&
+          strlen(entry.title) == SHELF_TITLE_MAX, "a long title is cut");
     CHECK(!shelf_parse_line("ariadne.prg|1|1|00000000|x|y|z", &entry), "a lower-case file name is refused");
     CHECK(!shelf_parse_line("A.PRG|1|ten|00000000|x|y|z", &entry), "a size that is not a number is refused");
     strcpy(entry.file, "C64-DEMO.PRG");
@@ -123,6 +132,7 @@ static void test_shelf_lines(void)
     entry.size = 4641;
     entry.crc32 = 0xaf681ffcUL;
     strcpy(entry.title, "Demo");
+    strcpy(entry.author, "");
     strcpy(entry.description, "");
     shelf_format_line(&entry, line);
     CHECK(strcmp(line, "C64-DEMO.PRG|1.0.0|4641|AF681FFC|Demo||\n") == 0,
@@ -220,6 +230,44 @@ static int nolength_sink(const unsigned char *data, unsigned int length, void *c
     return 0;
 }
 
+typedef struct {
+    char data[64];
+    unsigned int length;
+} Collected;
+
+static int collect_sink(const unsigned char *data, unsigned int length, void *context)
+{
+    Collected *collected = (Collected *)context;
+    if (collected->length + length > sizeof collected->data) return 1;
+    memcpy(collected->data + collected->length, data, length);
+    collected->length += length;
+    return 0;
+}
+
+static void test_preview(void)
+{
+    static const char picture[] = "\x01\x00\x06pixels";
+    Collected collected;
+    printf("preview\n");
+    store_init(&store);
+    store.net = &net_posix;
+    strcpy(store.config.host, "127.0.0.1");
+    store.config.port = (unsigned int)atoi(getenv("PORT"));
+    shelf_begin();
+    shelf_add("GAMEONE.PRG", "1.0.0", game1, sizeof game1 - 1, "Game One");
+    shelf_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
+    shelf_publish();
+    write_file("SERVER_ROOT", "C64/GAMEONE.PVW", picture, sizeof picture - 1);
+    store_fetch(&store, 0);
+    memset(&collected, 0, sizeof collected);
+    CHECK(store_preview(&store, (unsigned char)remote_index("GAMEONE.PRG"), collect_sink, &collected, 0) == STORE_OK &&
+          collected.length == sizeof picture - 1 && memcmp(collected.data, picture, collected.length) == 0,
+          "NAME.PVW beside NAME.PRG is fetched");
+    memset(&collected, 0, sizeof collected);
+    CHECK(store_preview(&store, (unsigned char)remote_index("GAMETWO.PRG"), collect_sink, &collected, 0) == STORE_ERR_NETWORK,
+          "a missing preview is an error");
+}
+
 static void test_http(void)
 {
     HttpResult result;
@@ -247,6 +295,7 @@ int main(void)
     test_config();
     test_shelf_lines();
     test_store();
+    test_preview();
     test_http();
     printf(failures ? "%d FAILED\n" : "all passed\n", failures);
     return failures ? 1 : 0;

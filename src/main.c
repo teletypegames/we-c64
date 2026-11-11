@@ -1,9 +1,11 @@
 /* WARP64U: the Teletype Games store on the C64.
  *
  * The list is the shelf on the server (INDEX.TXT) beside what is installed
- * here (WARP64U.IDX); RETURN installs or updates, R runs, DEL removes, F1
- * reads the shelf again. Running a title leaves WARP64U the old way: LOAD and
- * RUN on the screen, two RETURNs in the keyboard buffer. */
+ * here (WARP64U.IDX); RETURN installs or updates, R runs, DEL removes, U
+ * updates every title, SPACE shows the details of one, P its preview, C
+ * narrows the list to one category, F1 reads the shelf again. At start a new
+ * WARP64U on the shelf is offered. Running a title leaves WARP64U the old
+ * way: LOAD and RUN on the screen, two RETURNs in the keyboard buffer. */
 #include <cbm.h>
 #include <conio.h>
 #include <stdlib.h>
@@ -11,6 +13,7 @@
 #include "config.h"
 #include "disk.h"
 #include "net.h"
+#include "preview.h"
 #include "store.h"
 #include "text.h"
 #include "version.h"
@@ -34,6 +37,9 @@ extern const NetDriver net_modem;
 #define KEY_DEL 0x14
 #define KEY_UP 0x91
 #define KEY_F1 0x85
+#define KEY_SPACE 0x20
+
+#define CATEGORY_SLOTS 6
 
 /* Where LOAD and RUN go so that the two RETURNs find them. Leaving to BASIC
  * scrolls the screen up a line and prints READY. at the top, so LOAD, written
@@ -56,6 +62,9 @@ static unsigned char selected;
 static unsigned char first;
 static unsigned char online;
 static unsigned char device;
+static char categories[CATEGORY_SLOTS][SHELF_CATEGORY_MAX + 1];
+static unsigned char category_count;
+static unsigned char filter;
 
 static void put_ascii(const char *text, unsigned char width)
 {
@@ -105,15 +114,39 @@ static const char *row_file(const Row *row)
     return row->kind == ROW_REMOTE ? store.remote.entries[row->index].file : store.local[row->index].file;
 }
 
+static void collect_categories(void)
+{
+    unsigned char i, k;
+    const char *category;
+    category_count = 0;
+    for (i = 0; i < store.remote.count; ++i) {
+        category = store.remote.entries[i].category;
+        for (k = 0; k < category_count; ++k)
+            if (strcmp(categories[k], category) == 0) break;
+        if (k == category_count && category_count < CATEGORY_SLOTS) strcpy(categories[category_count++], category);
+    }
+    if (filter > category_count) filter = 0;
+}
+
+/* A title without a category is a game. */
+static void put_category(const char *category, unsigned char width)
+{
+    if (*category) put_ascii(category, width);
+    else put_text("game", width);
+}
+
 static void build_rows(void)
 {
     unsigned char i;
     row_count = 0;
+    collect_categories();
     for (i = 0; i < store.remote.count; ++i) {
+        if (filter && strcmp(store.remote.entries[i].category, categories[filter - 1]) != 0) continue;
         rows[row_count].kind = ROW_REMOTE;
         rows[row_count++].index = i;
     }
     for (i = 0; i < store.local_count; ++i) {
+        if (filter) break;
         if (shelf_find(&store.remote, store.local[i].file) >= 0) continue;
         rows[row_count].kind = ROW_LOCAL;
         rows[row_count++].index = i;
@@ -133,7 +166,9 @@ static void draw_header(void)
     revers(1);
     textcolor(COLOR_LIGHTGREEN);
     cputs(" Warp64u " WARP64U_VERSION);
-    cclear(40 - 9 - (unsigned char)strlen(WARP64U_VERSION) - 10);
+    cputc(' ');
+    if (filter) put_category(categories[filter - 1], 40 - 10 - (unsigned char)strlen(WARP64U_VERSION) - 10);
+    else put_text("all", 40 - 10 - (unsigned char)strlen(WARP64U_VERSION) - 10);
     put_text(online && store.net ? store.net->name : (const char *)"offline", 10);
     revers(0);
     textcolor(COLOR_GRAY3);
@@ -214,7 +249,7 @@ static void draw_help(void)
     gotoxy(0, HELP_ROW);
     revers(1);
     textcolor(COLOR_GRAY2);
-    put_text(online ? " ret install r run del remove f1 reload" : " r run  del remove  f1 retry  q quit", 39);
+    put_text(online ? " ret get r run del u all spc info c type" : " r run  del remove  f1 retry  q quit", 39);
     revers(0);
     textcolor(COLOR_GRAY3);
 }
@@ -411,11 +446,178 @@ static void launch(const char *file)
     exit(0);
 }
 
+/* Installs shelf entry +index+, showing the progress on the message row;
+ * returns the STORE_ code. */
+static int install(unsigned char index)
+{
+    message("Loading ");
+    textcolor(COLOR_YELLOW);
+    put_ascii(store.remote.entries[index].file, 12);
+    textcolor(COLOR_GRAY3);
+    last_shown = 0;
+    return store_install(&store, index, tick);
+}
+
+static void put_label(unsigned char line, const char *label)
+{
+    gotoxy(1, line);
+    textcolor(COLOR_GRAY2);
+    put_text(label, 9);
+    textcolor(COLOR_GRAY3);
+}
+
+/* The description, broken at the spaces into lines of 38 from +line+ on. */
+static void put_wrapped(const char *text, unsigned char line)
+{
+    unsigned char width, cut;
+    while (*text && line < MESSAGE_ROW) {
+        while (*text == ASCII_SPACE) ++text;
+        width = 0;
+        cut = 0;
+        while (text[width] && width < 38) {
+            if (text[width] == ASCII_SPACE) cut = width;
+            ++width;
+        }
+        if (text[width] && cut) width = cut;
+        gotoxy(1, line++);
+        for (cut = 0; cut < width; ++cut) cputc(display_from_ascii(text[cut]));
+        text += width;
+    }
+}
+
+static void draw_info(unsigned char index)
+{
+    const ShelfEntry *entry = &store.remote.entries[index];
+    int local = store_local_find(&store, entry->file);
+    clrscr();
+    draw_header();
+    gotoxy(1, LIST_TOP);
+    textcolor(COLOR_WHITE);
+    put_ascii(entry->title, 38);
+    put_label(LIST_TOP + 2, "file");
+    put_ascii(entry->file, 28);
+    put_label(LIST_TOP + 3, "version");
+    put_ascii(entry->version, 10);
+    if (local >= 0) {
+        put_text("  here ", 7);
+        put_ascii(store.local[local].version, 10);
+    } else {
+        put_text("  not here", 10);
+    }
+    put_label(LIST_TOP + 4, "size");
+    show_count(entry->size);
+    cputs(" bytes");
+    put_label(LIST_TOP + 5, "author");
+    put_ascii(entry->author, 28);
+    put_label(LIST_TOP + 6, "type");
+    put_category(entry->category, 28);
+    textcolor(COLOR_LIGHTBLUE);
+    put_wrapped(entry->description, LIST_TOP + 8);
+    textcolor(COLOR_GRAY3);
+    gotoxy(0, HELP_ROW);
+    revers(1);
+    textcolor(COLOR_GRAY2);
+    put_text(entry->preview ? " ret get  r run  p preview  other: back" : " ret get  r run  other key: back", 39);
+    revers(0);
+    textcolor(COLOR_GRAY3);
+}
+
+/* Returns STORE_OK, or the STORE_ code of a failed preview (the reason is
+ * in store.message); the caller redraws its screen. */
+static int show_preview(unsigned char index)
+{
+    if (!online) return STORE_ERR_NETWORK;
+    if (!store.remote.entries[index].preview) {
+        ascii_copy(store.message, "No preview on the shelf");
+        return STORE_ERR_CHECK;
+    }
+    message("Loading the preview...");
+    return preview_show(&store, index);
+}
+
+/* The details of shelf entry +index+, until a key other than its own. */
+static void info(unsigned char index)
+{
+    char c;
+    unsigned char said = 0;
+    for (;;) {
+        draw_info(index);
+        if (said) message_ascii(store.message);
+        said = 0;
+        c = cgetc();
+        if (c == 'p') {
+            said = show_preview(index) != STORE_OK;
+        } else if (c == KEY_RETURN && online) {
+            install(index);
+            said = 1;
+        } else if (c == 'r' && store_local_find(&store, store.remote.entries[index].file) >= 0) {
+            launch(store.remote.entries[index].file);
+        } else {
+            return;
+        }
+    }
+}
+
+static int is_self(const char *file)
+{
+    char name[12];
+    ascii_copy(name, "WARP64U.PRG");
+    return strcmp(file, name) == 0;
+}
+
+/* Every title with a newer version on the shelf, WARP64U itself left out:
+ * that one is offered at start. RUN/STOP stops the round. */
+static void update_all(void)
+{
+    unsigned char i, done = 0, failed = 0;
+    int result;
+    for (i = 0; i < store.remote.count; ++i) {
+        if (is_self(store.remote.entries[i].file)) continue;
+        if (store_state(&store, store.remote.entries[i].file, store.remote.entries[i].version) != STATE_UPDATE) continue;
+        result = install(i);
+        if (result == STORE_ERR_ABORTED) break;
+        if (result == STORE_OK) ++done;
+        else ++failed;
+    }
+    draw_all();
+    if (failed) {
+        message_ascii(store.message);
+        return;
+    }
+    message("");
+    show_count(done);
+    cputs(done == 1 ? " title updated" : " titles updated");
+}
+
+/* A WARP64U on the shelf other than this one is offered; once installed,
+ * it is started in place of this one. */
+static void offer_self_update(void)
+{
+    char version[sizeof WARP64U_VERSION];
+    unsigned char i;
+    if (!online) return;
+    ascii_copy(version, WARP64U_VERSION);
+    for (i = 0; i < store.remote.count; ++i) {
+        if (!is_self(store.remote.entries[i].file)) continue;
+        if (strcmp(store.remote.entries[i].version, version) == 0) return;
+        message("Warp64u ");
+        put_ascii(store.remote.entries[i].version, 10);
+        cputs(" is out. Update? (y/n)");
+        if (cgetc() != 'y') {
+            message("");
+            return;
+        }
+        if (install(i) == STORE_OK) launch(store.remote.entries[i].file);
+        draw_all();
+        message_ascii(store.message);
+        return;
+    }
+}
+
 int main(void)
 {
     unsigned char c;
     const Row *row;
-    int result;
 
     device = *(unsigned char *)0x00BA;
     if (device < 8) device = 8;
@@ -435,6 +637,7 @@ int main(void)
     draw_header();
     connect_network();
     reload();
+    offer_self_update();
 
     for (;;) {
         c = cgetc();
@@ -458,17 +661,33 @@ int main(void)
             break;
         case KEY_RETURN:
             if (!row || !online || row->kind != ROW_REMOTE) break;
-            message("Loading ");
-            textcolor(COLOR_YELLOW);
-            put_ascii(store.remote.entries[row->index].file, 12);
-            textcolor(COLOR_GRAY3);
-            last_shown = 0;
-            result = store_install(&store, row->index, tick);
+            install(row->index);
             draw_list();
             draw_header();
             draw_help();
             message_ascii(store.message);
-            (void)result;
+            break;
+        case KEY_SPACE:
+            if (!row || row->kind != ROW_REMOTE) break;
+            info(row->index);
+            draw_all();
+            break;
+        case 'p':
+            if (!row || row->kind != ROW_REMOTE) break;
+            c = (unsigned char)(show_preview(row->index) != STORE_OK);
+            draw_all();
+            if (c) message_ascii(store.message);
+            break;
+        case 'u':
+            if (online) update_all();
+            break;
+        case 'c':
+            if (!category_count) break;
+            filter = (unsigned char)((filter + 1) % (category_count + 1));
+            selected = 0;
+            first = 0;
+            build_rows();
+            draw_all();
             break;
         case 'r':
             if (!row || store_local_find(&store, row_file(row)) < 0) break;

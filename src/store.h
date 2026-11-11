@@ -13,7 +13,7 @@
 #include "net.h"
 #include "shelf.h"
 
-#define LOCAL_MAX 40
+#define LOCAL_MAX 24
 
 typedef struct {
     char file[SHELF_FILE_MAX + 1];
@@ -50,5 +50,6 @@ unsigned char store_state(const Store *store, const char *file, const char *remo
 int store_local_find(const Store *store, const char *file);
 int store_install(Store *store, unsigned char index, HttpTick tick);
 int store_remove(Store *store, const char *file);
+int store_preview(Store *store, unsigned char index, HttpSink sink, void *context, HttpTick tick);
 
 #endif

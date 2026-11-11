@@ -8,6 +8,13 @@
 
 static unsigned char chunk[CHUNK];
 
+/* One line, one entry, one URL and one HTTP result serve every function
+ * here: none of them runs inside another. */
+static char line[SHELF_LINE_MAX + 1];
+static ShelfEntry entry;
+static char url[64];
+static HttpResult result;
+
 static void say(Store *store, const char *source_literal, const char *detail)
 {
     ascii_copy(store->message, source_literal);
@@ -58,9 +65,7 @@ static void local_remove(Store *store, const char *file)
 int store_load_local(Store *store)
 {
     char name[17];
-    static char line[SHELF_LINE_MAX + 1];
     unsigned int length = 0;
-    static ShelfEntry entry;
     int n, i;
     unsigned char c;
 
@@ -88,8 +93,6 @@ int store_load_local(Store *store)
 static int save_local(Store *store)
 {
     char next[17], name[17];
-    static char line[SHELF_LINE_MAX + 1];
-    static ShelfEntry entry;
     unsigned char i;
 
     index_name(next, "WARP64U.IDN");
@@ -129,9 +132,7 @@ static void url_of(const Store *store, const char *file, char *url)
 
 int store_fetch(Store *store, HttpTick tick)
 {
-    static char url[64];
     char index[10];
-    HttpResult result;
     int error;
 
     index_name(index, "INDEX.TXT");
@@ -188,18 +189,16 @@ static int disk_sink(const unsigned char *data, unsigned int length, void *conte
 
 int store_install(Store *store, unsigned char index, HttpTick tick)
 {
-    const ShelfEntry *entry = &store->remote.entries[index];
+    const ShelfEntry *wanted = &store->remote.entries[index];
     static char name[SHELF_FILE_MAX + 1], temporary[SHELF_FILE_MAX + 5], suffix[5];
-    static char url[64];
-    static HttpResult result;
     static Download download;
     int error;
 
-    shelf_disk_name(entry->file, name);
+    shelf_disk_name(wanted->file, name);
     strcpy(temporary, name);
     ascii_copy(suffix, ".TMP");
     strcat(temporary, suffix);
-    url_of(store, entry->file, url);
+    url_of(store, wanted->file, url);
 
     disk_scratch(temporary);
     if (disk_open_write(temporary, DISK_PRG) != 0) {
@@ -212,7 +211,7 @@ int store_install(Store *store, unsigned char index, HttpTick tick)
     error = http_get(store->net, store->config.host, store->config.port, url, disk_sink, &download, tick, &result);
     if (disk_close_write() != 0) download.failed = 1;
 
-    if (error != HTTP_OK || download.failed || download.size != entry->size || CRC32_FINISH(download.crc) != entry->crc32) {
+    if (error != HTTP_OK || download.failed || download.size != wanted->size || CRC32_FINISH(download.crc) != wanted->crc32) {
         disk_scratch(temporary);
         if (error == HTTP_ERR_ABORTED) {
             say(store, "Stopped", 0);
@@ -226,7 +225,7 @@ int store_install(Store *store, unsigned char index, HttpTick tick)
             say(store, "Download failed", 0);
             return STORE_ERR_NETWORK;
         }
-        say(store, "Check failed: ", entry->file);
+        say(store, "Check failed: ", wanted->file);
         return STORE_ERR_CHECK;
     }
 
@@ -235,13 +234,32 @@ int store_install(Store *store, unsigned char index, HttpTick tick)
         say(store, "Disk: ", disk_status());
         return STORE_ERR_DISK;
     }
-    local_put(store, entry);
+    local_put(store, wanted);
     if (save_local(store) != STORE_OK) {
         say(store, "Disk: ", disk_status());
         return STORE_ERR_DISK;
     }
-    say(store, "Installed ", entry->file);
+    say(store, "Installed ", wanted->file);
     return STORE_OK;
+}
+
+int store_preview(Store *store, unsigned char index, HttpSink sink, void *context, HttpTick tick)
+{
+    static char name[SHELF_FILE_MAX + 5], suffix[5];
+    int error;
+
+    shelf_disk_name(store->remote.entries[index].file, name);
+    ascii_copy(suffix, ".PVW");
+    strcat(name, suffix);
+    url_of(store, name, url);
+    error = http_get(store->net, store->config.host, store->config.port, url, sink, context, tick, &result);
+    if (error == HTTP_OK) return STORE_OK;
+    if (error == HTTP_ERR_ABORTED) {
+        say(store, "Stopped", 0);
+        return STORE_ERR_ABORTED;
+    }
+    say(store, "Preview failed: ", name);
+    return STORE_ERR_NETWORK;
 }
 
 int store_remove(Store *store, const char *file)

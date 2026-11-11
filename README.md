@@ -6,7 +6,7 @@ WARP64U lists the C64 games of Teletype Games, installs and updates them on a di
 
 - **A network**, one of:
   - an **Ultimate**: C64 Ultimate, Ultimate 64 or 1541 Ultimate-II+, with the **Command Interface turned on** in its menu (it is off by default), on Ethernet or Wi-Fi. The Ultimate does TCP and DNS itself. *This driver is written from the Ultimate documentation and has not run on hardware yet.*
-  - a **SwiftLink** (or Turbo232) cartridge at $DE00 with a **WiFi modem** that dials `ATDT host:port` (Zimodem, WiModem232 and the like), 38400 baud, RTS/CTS.
+  - a **SwiftLink** (or Turbo232) cartridge at $DE00 with a **WiFi modem** that dials `ATDT host:port` (Zimodem, WiModem232 and the like), 38400 baud, RTS/CTS. Tried on a C64 Ultimate and in VICE.
   - an **RR-Net or ETH64** cartridge (or a clone: 64NIC+ and the like), with DHCP on the network. WARP64U brings its own TCP/IP stack, [ip65](https://github.com/cc65/ip65).
 - **A disk drive** the KERNAL can write: a 1541/1571/1581, an SD2IEC, a Pi1541, the drives of an Ultimate.
 
@@ -19,7 +19,7 @@ LOAD"WARP64U",8,1
 RUN
 ```
 
-It finds the network (an Ultimate, then a modem, then an RR-Net/ETH64), reads the shelf and shows it beside what is on the disk:
+It finds the network (an Ultimate, then a modem, then an RR-Net/ETH64), reads the shelf and shows it beside what is on the disk. When the shelf has another WARP64U than the one running, it offers to update itself first; once installed, the new one starts in its place.
 
 | Key | |
 |---|---|
@@ -27,6 +27,10 @@ It finds the network (an Ultimate, then a modem, then an RR-Net/ETH64), reads th
 | RETURN | install, or update to the server's version |
 | R | start the title: WARP64U leaves, and LOAD and RUN go through the keyboard buffer |
 | DEL | remove it from the disk (asks first) |
+| U | update every title that has a new version (WARP64U itself is offered at start) |
+| SPACE | the details of the title: file, the shelf's and the disk's version, size, author, category, the whole description |
+| P | the preview: a picture of the title on the whole screen, any key returns |
+| C | one category only: all, then each category of the shelf in turn (a title without one is a *game*) |
 | F1 | read the shelf again (or try the network again) |
 | RUN/STOP | stop a download; in the list, quit |
 | Q | quit |
@@ -35,12 +39,16 @@ A title is *installed*, an *update* (the server has another version) or *local o
 
 ## How it installs
 
-1. `GET /C64/INDEX.TXT` over HTTP/1.0 with a `Host` header. Each line is `file|version|size|crc32|title|author|description` (the WarpEngine shelf format, `#SHELF 1`).
+1. `GET /C64/INDEX.TXT` over HTTP/1.0 with a `Host` header. Each line is `file|version|size|crc32|title|author|description|category|preview` (the WarpEngine shelf format, `#SHELF 2`; a version 1 line, without the last two fields, reads too). The list holds 24 titles; more are counted as skipped.
 2. A title is downloaded to `NAME.TMP` on the disk as it arrives, with its CRC-32 computed on the way.
 3. Only if the size and the CRC-32 match the index line: `S0:NAME`, then `R0:NAME=NAME.TMP`. Otherwise `NAME.TMP` is scratched and the installed version stays.
 4. `WARP64U.IDX` (the same format, the titles installed here) is written last, through `WARP64U.IDN` and a rename.
 
 The disk name is the shelf name without `.PRG` (`ARIADNE.PRG` → `ARIADNE`). The 1541's `@0:` save-with-replace is not used.
+
+## Previews
+
+A non-empty `preview` field means `NAME.PVW` is on the shelf beside `NAME.PRG`: a C64 bitmap the WarpEngine makes from the title's gallery image (3 header bytes: mode, background, border; the screen matrix; the color RAM in multicolor; the bitmap). WARP64U shows it from VIC bank 3: the bitmap goes straight to $E000, under the KERNAL; the color RAM to $D800; the matrix waits on the blanked text screen and is moved to $D000, under the I/O area, once the download is over (I/O and ROMs off for the copy, an RTI behind the NMI vector meanwhile).
 
 ## Settings: WARP64U.CFG
 
@@ -68,7 +76,8 @@ Needs [cc65](https://cc65.github.io/) (2.18 or 2.19) and, for the disk image, VI
 
 | Path | |
 |---|---|
-| `src/main.c` | the screen, the keys, starting a title |
+| `src/main.c` | the screen, the keys, the details, updating, starting a title |
+| `src/preview.c` | downloading and showing a preview |
 | `src/store.c` | the shelf and the local index, install / update / remove |
 | `src/http.c` | HTTP/1.0 GET, the body streamed to a sink |
 | `src/shelf.c` | `INDEX.TXT` lines |
