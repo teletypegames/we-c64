@@ -137,6 +137,12 @@ static void test_shelf_lines(void)
     shelf_format_line(&entry, line);
     CHECK(strcmp(line, "C64-DEMO.PRG|1.0.0|4641|AF681FFC|Demo||\n") == 0,
           "a local line round-trips");
+    entry.crc32 = 0xb759e215UL;
+    shelf_format_line(&entry, line);
+    CHECK(strstr(line, "|B759E215|") != NULL, "a CRC-32 with letters is written in hex capitals");
+    CHECK(!shelf_parse_line("B.PRG|2.2.0|1|l759l215|||", &entry), "a broken CRC-32 is refused on the shelf");
+    CHECK(shelf_parse_local_line("B.PRG|2.2.0|1|l759l215|||", &entry) && strcmp(entry.version, "2.2.0") == 0,
+          "and read in the local index, the name and version kept");
     shelf_disk_name("C64-DEMO.PRG", line);
     CHECK(strcmp(line, "C64-DEMO") == 0, "the disk name drops .PRG");
 }

@@ -77,7 +77,7 @@ static int valid_file(const char *file)
     return 1;
 }
 
-int shelf_parse_line(const char *line, ShelfEntry *entry)
+static int parse(const char *line, ShelfEntry *entry, unsigned char strict)
 {
     char number[12];
     const char *p = line;
@@ -87,7 +87,10 @@ int shelf_parse_line(const char *line, ShelfEntry *entry)
     p = field(p, number, sizeof number - 1);
     if (!parse_number(number, &entry->size, 10)) return 0;
     p = field(p, number, sizeof number - 1);
-    if (!parse_number(number, &entry->crc32, 16)) return 0;
+    if (!parse_number(number, &entry->crc32, 16)) {
+        if (strict) return 0;
+        entry->crc32 = 0;
+    }
     p = field(p, entry->title, SHELF_TITLE_MAX);
     p = field(p, entry->author, SHELF_AUTHOR_MAX);
     p = field(p, entry->description, SHELF_DESC_MAX);
@@ -98,6 +101,20 @@ int shelf_parse_line(const char *line, ShelfEntry *entry)
     if (!entry->title[0]) strcpy(entry->title, entry->file);
     return 1;
 }
+
+int shelf_parse_line(const char *line, ShelfEntry *entry)
+{
+    return parse(line, entry, 1);
+}
+
+int shelf_parse_local_line(const char *line, ShelfEntry *entry)
+{
+    return parse(line, entry, 0);
+}
+
+static const unsigned char hex_digits[16] = {
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46
+};
 
 static char *put_text(char *p, const char *text)
 {
@@ -113,7 +130,7 @@ static char *put_number(char *p, uint32_t value, unsigned char base)
     unsigned char width = base == 16 ? 8 : 1;
     do {
         d = (unsigned char)(value % base);
-        digits[n++] = (char)(d < 10 ? 0x30 + d : 0x41 + d - 10);
+        digits[n++] = (char)hex_digits[d];
         value /= base;
     } while (value || n < width);
     while (n) *p++ = digits[--n];

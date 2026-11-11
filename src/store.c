@@ -88,7 +88,7 @@ int store_load_local(Store *store)
             c = chunk[i];
             if (c == ASCII_LF || c == ASCII_CR) {
                 line[length] = 0;
-                if (length && shelf_parse_line(line, &entry)) local_put(store, &entry);
+                if (length && shelf_parse_local_line(line, &entry)) local_put(store, &entry);
                 length = 0;
             } else if (length < SHELF_LINE_MAX) {
                 line[length++] = (char)c;
@@ -97,7 +97,7 @@ int store_load_local(Store *store)
     }
     disk_close_read();
     line[length] = 0;
-    if (length && shelf_parse_line(line, &entry)) local_put(store, &entry);
+    if (length && shelf_parse_local_line(line, &entry)) local_put(store, &entry);
     return STORE_OK;
 }
 

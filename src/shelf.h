@@ -47,6 +47,10 @@ void shelf_clear(Shelf *shelf);
 void shelf_feed(Shelf *shelf, const unsigned char *data, unsigned int length);
 void shelf_finish(Shelf *shelf);
 int shelf_parse_line(const char *line, ShelfEntry *entry);
+/* The same for a line of WARP64U.IDX, where a CRC-32 that does not parse
+ * is read as 0 (1.0.1 and earlier wrote the hex letters of a CRC-32 wrong on
+ * the C64); the local list needs the name and the version only. */
+int shelf_parse_local_line(const char *line, ShelfEntry *entry);
 void shelf_format_line(const ShelfEntry *entry, char *line);
 int shelf_find(const Shelf *shelf, const char *file);
 int shelf_put(Shelf *shelf, const ShelfEntry *entry);
