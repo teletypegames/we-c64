@@ -69,9 +69,20 @@ int store_load_local(Store *store)
     int n, i;
     unsigned char c;
 
-    store->local_count = 0;
+    unsigned char tries = 3;
+
     index_name(name, "WARP64U.IDX");
-    if (disk_open_read(name, DISK_SEQ) != 0) return STORE_OK;
+    while (disk_open_read(name, DISK_SEQ) != 0) {
+        if (disk_status()[0] == 0x36 && disk_status()[1] == 0x32) {
+            store->local_count = 0;
+            return STORE_OK;
+        }
+        if (!--tries) {
+            say(store, "Index: ", disk_status());
+            return STORE_ERR_DISK;
+        }
+    }
+    store->local_count = 0;
     while ((n = disk_read(chunk, CHUNK)) > 0) {
         for (i = 0; i < n; ++i) {
             c = chunk[i];
@@ -262,9 +273,10 @@ int store_preview(Store *store, unsigned char index, HttpSink sink, void *contex
     return STORE_ERR_NETWORK;
 }
 
-int store_remove(Store *store, const char *file)
+int store_remove(Store *store, const char *file_in_list)
 {
-    char name[SHELF_FILE_MAX + 1];
+    char name[SHELF_FILE_MAX + 1], file[SHELF_FILE_MAX + 1];
+    strcpy(file, file_in_list);
     shelf_disk_name(file, name);
     disk_scratch(name);
     local_remove(store, file);

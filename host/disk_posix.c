@@ -46,6 +46,7 @@ int disk_open_read(const char *name, unsigned char type)
     (void)type;
     path_of(name, path);
     reading = fopen(path, "rb");
+    snprintf(status, sizeof status, reading ? "00, OK,00,00" : "62,FILE NOT FOUND,00,00");
     return reading ? 0 : -1;
 }
 

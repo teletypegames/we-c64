@@ -44,6 +44,9 @@ typedef struct {
 #define STORE_ERR_ABORTED 5
 
 void store_init(Store *store);
+/* Reads WARP64U.IDX into the local list. A missing index is an empty list;
+ * a drive error (after three tries) leaves the list as it was and returns
+ * STORE_ERR_DISK with the drive's status in the message. */
 int store_load_local(Store *store);
 int store_fetch(Store *store, HttpTick tick);
 unsigned char store_state(const Store *store, const char *file, const char *remote_version);

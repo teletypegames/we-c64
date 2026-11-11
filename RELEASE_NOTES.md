@@ -2,6 +2,11 @@ WARP64U is the Teletype Games store on the C64. It reads the C64 shelf of `http:
 
 **Install:** copy `WARP64U` from `warp64u-<version>.prg` to a disk or an SD2IEC, and start it with `LOAD"WARP64U",8,1` and `RUN`. It needs a network: an Ultimate (C64 Ultimate, Ultimate 64, 1541 Ultimate-II+) with the Command Interface turned on, a SwiftLink with a WiFi modem, or an RR-Net or ETH64 cartridge.
 
+**1.0.1**:
+
+- WARP64U.IDX is read before the network starts, and read again up to three times when the drive does not answer; a read that still fails says the drive's status on the message row and keeps the list as it was, instead of showing nothing installed
+- Removing a title names the right one in the message
+
 **1.0.0**:
 
 - At start, a newer WARP64U on the shelf is offered; once installed, it starts in place of the old one

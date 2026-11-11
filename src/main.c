@@ -352,9 +352,22 @@ static void connect_network(void)
     else if (wanted("ip65") && try_driver(&net_ip65)) online = 1;
 }
 
+/* Reads WARP64U.IDX; a drive that does not answer is said on the message
+ * row, a missing index is no title installed. Returns 0 when it was read. */
+static char local_error[48];
+
+static int load_local(void)
+{
+    local_error[0] = 0;
+    if (store_load_local(&store) == STORE_OK) return 0;
+    strcpy(local_error, store.message);
+    message_ascii(local_error);
+    return -1;
+}
+
 static void reload(void)
 {
-    store_load_local(&store);
+    load_local();
     store.remote.count = 0;
     if (online) {
         message("Reading the shelf...");
@@ -368,7 +381,9 @@ static void reload(void)
     }
     build_rows();
     draw_all();
-    if (online) {
+    if (local_error[0]) {
+        message_ascii(local_error);
+    } else if (online) {
         gotoxy(0, MESSAGE_ROW);
         textcolor(COLOR_GRAY2);
         show_count(store.remote.count);
@@ -635,6 +650,7 @@ int main(void)
     disk_use(device);
     if (store.config.dir[0]) disk_cd(store.config.dir);
     draw_header();
+    load_local();
     connect_network();
     reload();
     offer_self_update();
