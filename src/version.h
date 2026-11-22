@@ -1,6 +1,6 @@
 #ifndef WE64_VERSION_H
 #define WE64_VERSION_H
 
-#define WE64_VERSION "1.1.0"
+#define WE64_VERSION "1.1.1"
 
 #endif

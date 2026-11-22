@@ -2,6 +2,10 @@ WE64 is the Teletype Games store on the C64. It reads the C64 shelf of `http://a
 
 **Install:** copy `WE64` from `we-c64-<version>.prg` to a disk or an SD2IEC, and start it with `LOAD"WE64",8,1` and `RUN`. It needs a network: an Ultimate (C64 Ultimate, Ultimate 64, 1541 Ultimate-II+) with the Command Interface turned on, a SwiftLink with a WiFi modem, or an RR-Net or ETH64 cartridge.
 
+**1.1.1**:
+
+- The first release on the shelf as `WE64.PRG` (catalog: `we-c64`); the same program as 1.1.0, which went out as WARP64U for the copies that look for it
+
 **1.1.0**:
 
 - WARP64U is WE64 now. The first start on a disk that had WARP64U renames the program, its settings and its index (`WE64`, `WE64.CFG`, `WE64.IDX`), so what was installed stays installed. This version is also the last WARP64U on the shelf: the update WARP64U offers at start is WE64

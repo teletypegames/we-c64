@@ -32,9 +32,6 @@ build/we64.prg: $(SOURCES) src/*.h $(IP65LIB) $(DRIVERLIB)
 we-c64.prg: build/we64.prg
 	cp build/we64.prg $@
 
-warp64u.prg: build/we64.prg
-	cp build/we64.prg $@
-
 build/we64.d64: build/we64.prg
 	rm -f $@
 	$(C1541) -format "we64,64" d64 $@ -write build/we64.prg we64 >/dev/null

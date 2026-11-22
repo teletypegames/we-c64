@@ -1,11 +1,11 @@
 {
-  "name": "warp64u",
-  "title": "WARP64U",
+  "name": "we-c64",
+  "title": "WE64",
   "author": "Teletype Games",
   "desc": "The Teletype Games store on the C64: lists the C64 shelf of archive.teletypegames.org, installs and updates the games over the network (an Ultimate, a SwiftLink with a WiFi modem, or an RR-Net/ETH64 cartridge) and starts them.",
   "license": "MIT",
   "category": "tool",
-  "shelf_name": "WARP64U",
+  "shelf_name": "WE64",
   "repo": "https://git.teletypegames.org/stores/we-c64",
-  "version": "1.1.0"
+  "version": "1.1.1"
 }
