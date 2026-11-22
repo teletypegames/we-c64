@@ -1,7 +1,7 @@
-/* WARP64U.CFG: KEY=value lines, ASCII or PETSCII as typed on the C64.
+/* WE64.CFG: KEY=value lines, ASCII or PETSCII as typed on the C64.
  * A missing file or key leaves the default. */
-#ifndef WARP64U_CONFIG_H
-#define WARP64U_CONFIG_H
+#ifndef WE64_CONFIG_H
+#define WE64_CONFIG_H
 
 #define CONFIG_TEXT_MAX 40
 

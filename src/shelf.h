@@ -1,4 +1,4 @@
-/* One shelf: the titles of INDEX.TXT, or of the local WARP64U.IDX.
+/* One shelf: the titles of INDEX.TXT, or of the local WE64.IDX.
  *
  *   #SHELF 2 file|version|size|crc32|title|author|description|category|preview
  *   ARIADNE.PRG|1.1.0|10561|e6d8fe00|Thread of Ariadne|Teletype Games|...|game|ARIADNE.PVW
@@ -9,8 +9,8 @@
  *
  * A line is read a byte at a time, so the index streams straight from the
  * network into the table; a line that does not parse is left out. */
-#ifndef WARP64U_SHELF_H
-#define WARP64U_SHELF_H
+#ifndef WE64_SHELF_H
+#define WE64_SHELF_H
 
 #include <stdint.h>
 
@@ -47,7 +47,7 @@ void shelf_clear(Shelf *shelf);
 void shelf_feed(Shelf *shelf, const unsigned char *data, unsigned int length);
 void shelf_finish(Shelf *shelf);
 int shelf_parse_line(const char *line, ShelfEntry *entry);
-/* The same for a line of WARP64U.IDX, where a CRC-32 that does not parse
+/* The same for a line of WE64.IDX, where a CRC-32 that does not parse
  * is read as 0 (1.0.1 and earlier wrote the hex letters of a CRC-32 wrong on
  * the C64); the local list needs the name and the version only. */
 int shelf_parse_local_line(const char *line, ShelfEntry *entry);

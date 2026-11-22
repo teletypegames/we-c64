@@ -3,8 +3,8 @@
  * A driver opens a connection to a host name and a port, sends, and receives
  * what has arrived. net_receive returns the number of bytes read, 0 when the
  * peer closed the connection, and NET_WAIT when nothing has come yet. */
-#ifndef WARP64U_NET_H
-#define WARP64U_NET_H
+#ifndef WE64_NET_H
+#define WE64_NET_H
 
 #define NET_WAIT (-1)
 #define NET_ERROR (-2)

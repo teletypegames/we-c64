@@ -8,8 +8,8 @@
  * The same reason keeps character literals out of the code that reads the
  * wire: cc65 would turn '|' or '\n' into PETSCII too, so ASCII bytes are
  * written as numbers (ASCII_BAR and the rest). */
-#ifndef WARP64U_TEXT_H
-#define WARP64U_TEXT_H
+#ifndef WE64_TEXT_H
+#define WE64_TEXT_H
 
 #define ASCII_LF 0x0A
 #define ASCII_CR 0x0D

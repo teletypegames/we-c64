@@ -177,7 +177,7 @@ static void test_store(void)
     strcpy(store.config.host, "127.0.0.1");
     store.config.port = (unsigned int)atoi(getenv("PORT"));
     CHECK(store_load_local(&store) == STORE_OK && store.local_count == 1 && strcmp(store.local[0].version, "1.0.0") == 0,
-          "WARP64U.IDX remembers it");
+          "WE64.IDX remembers it");
 
     shelf_begin();
     shelf_add("GAMEONE.PRG", "1.1.0", game1b, sizeof game1b - 1, "Game One");
@@ -222,7 +222,18 @@ static void test_store(void)
     CHECK(store_remove(&store, "GAMEONE.PRG") == STORE_OK && file_size("DISK_DIR", "GAMEONE") < 0 &&
           store_local_find(&store, "GAMEONE.PRG") < 0, "remove takes the file and the line");
     store_load_local(&store);
-    CHECK(store.local_count == 0, "and WARP64U.IDX agrees");
+    CHECK(store.local_count == 0, "and WE64.IDX agrees");
+
+    strcpy(store.local[0].file, "WARP64U.PRG");
+    strcpy(store.local[0].version, "1.0.2");
+    store.local_count = 1;
+    CHECK(store_rename_local(&store, "WARP64U.PRG", "WE64.PRG") == STORE_OK &&
+          store_local_find(&store, "WE64.PRG") == 0 && store_local_find(&store, "WARP64U.PRG") < 0,
+          "the old program's line takes the new name");
+    store_load_local(&store);
+    CHECK(store.local_count == 1 && strcmp(store.local[0].file, "WE64.PRG") == 0, "and WE64.IDX keeps it");
+    CHECK(store_rename_local(&store, "MISSING.PRG", "OTHER.PRG") == STORE_OK && store.local_count == 1,
+          "a title not in the list changes nothing");
 
     store.config.port = 1;
     CHECK(store_fetch(&store, 0) == STORE_ERR_NETWORK && strstr(store.message, "refused") != 0,

@@ -1,6 +1,6 @@
-#ifndef WARP64U_VERSION_H
-#define WARP64U_VERSION_H
+#ifndef WE64_VERSION_H
+#define WE64_VERSION_H
 
-#define WARP64U_VERSION "1.0.2"
+#define WE64_VERSION "1.1.0"
 
 #endif

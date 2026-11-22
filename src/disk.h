@@ -1,8 +1,8 @@
 /* The few file operations the store needs, on a CBM drive (IEC) or, in the
  * host tests, a folder. Names are the bare disk names (ARIADNE, not
  * ARIADNE.PRG); a program is written as a PRG file, the index files as SEQ. */
-#ifndef WARP64U_DISK_H
-#define WARP64U_DISK_H
+#ifndef WE64_DISK_H
+#define WE64_DISK_H
 
 #define DISK_PRG 0
 #define DISK_SEQ 1

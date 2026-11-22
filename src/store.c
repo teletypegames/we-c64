@@ -71,7 +71,7 @@ int store_load_local(Store *store)
 
     unsigned char tries = 3;
 
-    index_name(name, "WARP64U.IDX");
+    index_name(name, "WE64.IDX");
     while (disk_open_read(name, DISK_SEQ) != 0) {
         if (disk_status()[0] == 0x36 && disk_status()[1] == 0x32) {
             store->local_count = 0;
@@ -106,8 +106,8 @@ static int save_local(Store *store)
     char next[17], name[17];
     unsigned char i;
 
-    index_name(next, "WARP64U.IDN");
-    index_name(name, "WARP64U.IDX");
+    index_name(next, "WE64.IDN");
+    index_name(name, "WE64.IDX");
     disk_scratch(next);
     if (disk_open_write(next, DISK_SEQ) != 0) return STORE_ERR_DISK;
     memset(&entry, 0, sizeof entry);
@@ -286,4 +286,15 @@ int store_remove(Store *store, const char *file_in_list)
     }
     say(store, "Removed ", file);
     return STORE_OK;
+}
+
+int store_rename_local(Store *store, const char *from_literal, const char *to_literal)
+{
+    char from[SHELF_FILE_MAX + 1];
+    int i;
+    ascii_copy(from, from_literal);
+    i = store_local_find(store, from);
+    if (i < 0) return STORE_OK;
+    ascii_copy(store->local[i].file, to_literal);
+    return save_local(store);
 }

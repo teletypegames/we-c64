@@ -4,9 +4,9 @@
  * Installing writes the download to NAME.TMP, checks its size and CRC-32
  * against the index, and only then scratches NAME and renames NAME.TMP to it:
  * a broken or interrupted download leaves the installed version as it was.
- * WARP64U.IDX, the list of what is installed here, is written last. */
-#ifndef WARP64U_STORE_H
-#define WARP64U_STORE_H
+ * WE64.IDX, the list of what is installed here, is written last. */
+#ifndef WE64_STORE_H
+#define WE64_STORE_H
 
 #include "config.h"
 #include "http.h"
@@ -44,7 +44,7 @@ typedef struct {
 #define STORE_ERR_ABORTED 5
 
 void store_init(Store *store);
-/* Reads WARP64U.IDX into the local list. A missing index is an empty list;
+/* Reads WE64.IDX into the local list. A missing index is an empty list;
  * a drive error (after three tries) leaves the list as it was and returns
  * STORE_ERR_DISK with the drive's status in the message. */
 int store_load_local(Store *store);
@@ -53,6 +53,9 @@ unsigned char store_state(const Store *store, const char *file, const char *remo
 int store_local_find(const Store *store, const char *file);
 int store_install(Store *store, unsigned char index, HttpTick tick);
 int store_remove(Store *store, const char *file);
+/* Renames a title in the local list and saves it; a title not in the list
+ * changes nothing. Both names are C string literals, as ascii_copy takes. */
+int store_rename_local(Store *store, const char *from_literal, const char *to_literal);
 int store_preview(Store *store, unsigned char index, HttpSink sink, void *context, HttpTick tick);
 
 #endif

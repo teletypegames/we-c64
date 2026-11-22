@@ -1,6 +1,6 @@
 /* zlib's CRC-32, the one INDEX.TXT carries. */
-#ifndef WARP64U_CRC32_H
-#define WARP64U_CRC32_H
+#ifndef WE64_CRC32_H
+#define WE64_CRC32_H
 
 #include <stdint.h>
 

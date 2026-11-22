@@ -3,8 +3,8 @@
  * The request carries a Host header (the server picks the site by it). The
  * status line and Content-Length are read; the other headers are skipped; the
  * body goes to the sink as it arrives, so a file never has to fit in memory. */
-#ifndef WARP64U_HTTP_H
-#define WARP64U_HTTP_H
+#ifndef WE64_HTTP_H
+#define WE64_HTTP_H
 
 #include <stdint.h>
 #include "net.h"

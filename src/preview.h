@@ -11,8 +11,8 @@
  *
  * The VIC shows it from bank 3: the bitmap at $E000, under the KERNAL (a
  * write reaches the RAM there), the matrix at $D000, under the I/O area. */
-#ifndef WARP64U_PREVIEW_H
-#define WARP64U_PREVIEW_H
+#ifndef WE64_PREVIEW_H
+#define WE64_PREVIEW_H
 
 #include "store.h"
 

@@ -1,10 +1,10 @@
-/* WARP64U: the Teletype Games store on the C64.
+/* WE64: the Teletype Games store on the C64.
  *
  * The list is the shelf on the server (INDEX.TXT) beside what is installed
- * here (WARP64U.IDX); RETURN installs or updates, R runs, DEL removes, U
+ * here (WE64.IDX); RETURN installs or updates, R runs, DEL removes, U
  * updates every title, SPACE shows the details of one, P its preview, C
  * narrows the list to one category, F1 reads the shelf again. At start a new
- * WARP64U on the shelf is offered. Running a title leaves WARP64U the old
+ * WE64 on the shelf is offered. Running a title leaves WE64 the old
  * way: LOAD and RUN on the screen, two RETURNs in the keyboard buffer. */
 #include <cbm.h>
 #include <conio.h>
@@ -165,10 +165,10 @@ static void draw_header(void)
     gotoxy(0, 0);
     revers(1);
     textcolor(COLOR_LIGHTGREEN);
-    cputs(" Warp64u " WARP64U_VERSION);
+    cputs(" WE64 " WE64_VERSION);
     cputc(' ');
-    if (filter) put_category(categories[filter - 1], 40 - 10 - (unsigned char)strlen(WARP64U_VERSION) - 10);
-    else put_text("all", 40 - 10 - (unsigned char)strlen(WARP64U_VERSION) - 10);
+    if (filter) put_category(categories[filter - 1], 40 - 10 - (unsigned char)strlen(WE64_VERSION) - 10);
+    else put_text("all", 40 - 10 - (unsigned char)strlen(WE64_VERSION) - 10);
     put_text(online && store.net ? store.net->name : (const char *)"offline", 10);
     revers(0);
     textcolor(COLOR_GRAY3);
@@ -306,12 +306,31 @@ static int tick(uint32_t received, uint32_t total)
     return 0;
 }
 
+/* WE64 was WARP64U. The first start on a disk that had it takes the
+ * program, its settings and its index over under the new names, so an
+ * update from WARP64U keeps what was installed. A rename that finds nothing
+ * to rename changes nothing; an old program beside a new one goes. */
+static void rename_on_disk(const char *from_literal, const char *to_literal)
+{
+    char from[17], to[17];
+    ascii_copy(from, from_literal);
+    ascii_copy(to, to_literal);
+    if (disk_rename(from, to) != 0 && strcmp(to_literal, "WE64") == 0) disk_scratch(from);
+}
+
+static void adopt_warp64u_files(void)
+{
+    disk_use(device);
+    rename_on_disk("WARP64U", "WE64");
+    rename_on_disk("WARP64U.CFG", "WE64.CFG");
+}
+
 static void read_config(void)
 {
     static unsigned char buffer[64];
     char name[12];
     int n;
-    ascii_copy(name, "WARP64U.CFG");
+    ascii_copy(name, "WE64.CFG");
     disk_use(device);
     if (disk_open_read(name, DISK_SEQ) != 0) return;
     while ((n = disk_read(buffer, sizeof buffer)) > 0) config_feed(&store.config, buffer, (unsigned int)n);
@@ -352,7 +371,7 @@ static void connect_network(void)
     else if (wanted("ip65") && try_driver(&net_ip65)) online = 1;
 }
 
-/* Reads WARP64U.IDX; a drive that does not answer is said on the message
+/* Reads WE64.IDX; a drive that does not answer is said on the message
  * row, a missing index is no title installed. Returns 0 when it was read. */
 static char local_error[48];
 
@@ -576,11 +595,11 @@ static void info(unsigned char index)
 static int is_self(const char *file)
 {
     char name[12];
-    ascii_copy(name, "WARP64U.PRG");
+    ascii_copy(name, "WE64.PRG");
     return strcmp(file, name) == 0;
 }
 
-/* Every title with a newer version on the shelf, WARP64U itself left out:
+/* Every title with a newer version on the shelf, WE64 itself left out:
  * that one is offered at start. RUN/STOP stops the round. */
 static void update_all(void)
 {
@@ -604,18 +623,18 @@ static void update_all(void)
     cputs(done == 1 ? " title updated" : " titles updated");
 }
 
-/* A WARP64U on the shelf other than this one is offered; once installed,
+/* A WE64 on the shelf other than this one is offered; once installed,
  * it is started in place of this one. */
 static void offer_self_update(void)
 {
-    char version[sizeof WARP64U_VERSION];
+    char version[sizeof WE64_VERSION];
     unsigned char i;
     if (!online) return;
-    ascii_copy(version, WARP64U_VERSION);
+    ascii_copy(version, WE64_VERSION);
     for (i = 0; i < store.remote.count; ++i) {
         if (!is_self(store.remote.entries[i].file)) continue;
         if (strcmp(store.remote.entries[i].version, version) == 0) return;
-        message("Warp64u ");
+        message("WE64 ");
         put_ascii(store.remote.entries[i].version, 10);
         cputs(" is out. Update? (y/n)");
         if (cgetc() != 'y') {
@@ -645,12 +664,14 @@ int main(void)
 
     store_init(&store);
     store.config.drive = device;
+    adopt_warp64u_files();
     read_config();
     device = store.config.drive;
     disk_use(device);
     if (store.config.dir[0]) disk_cd(store.config.dir);
+    rename_on_disk("WARP64U.IDX", "WE64.IDX");
     draw_header();
-    load_local();
+    if (load_local() == 0) store_rename_local(&store, "WARP64U.PRG", "WE64.PRG");
     connect_network();
     reload();
     offer_self_update();

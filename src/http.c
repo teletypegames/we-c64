@@ -36,7 +36,7 @@ static unsigned int build_request(char *request, const char *host, const char *p
     strcpy(p, host);
     p += strlen(p);
     p = put_crlf(p);
-    p = put_literal(p, "User-Agent: WARP64U");
+    p = put_literal(p, "User-Agent: WE64");
     p = put_crlf(p);
     p = put_crlf(p);
     *p = 0;

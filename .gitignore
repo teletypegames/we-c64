@@ -1,7 +1,7 @@
 build/
-/warp64u*.prg
-/warp64u*.zip
-/warp64u-*.metadata.json
+/*.prg
+/*.zip
+/we-c64-*.metadata.json
 /.version
 *.o
 *.lib
