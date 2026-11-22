@@ -234,6 +234,11 @@ static void test_store(void)
     CHECK(store.local_count == 1 && strcmp(store.local[0].file, "WE64.PRG") == 0, "and WE64.IDX keeps it");
     CHECK(store_rename_local(&store, "MISSING.PRG", "OTHER.PRG") == STORE_OK && store.local_count == 1,
           "a title not in the list changes nothing");
+    strcpy(store.local[1].file, "WARP64U.PRG");
+    strcpy(store.local[1].version, "1.0.2");
+    store.local_count = 2;
+    CHECK(store_rename_local(&store, "WARP64U.PRG", "WE64.PRG") == STORE_OK && store.local_count == 1 &&
+          store_local_find(&store, "WE64.PRG") == 0, "beside a WE64.PRG line the old line goes");
 
     store.config.port = 1;
     CHECK(store_fetch(&store, 0) == STORE_ERR_NETWORK && strstr(store.message, "refused") != 0,

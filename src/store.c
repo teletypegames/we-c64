@@ -292,9 +292,12 @@ int store_rename_local(Store *store, const char *from_literal, const char *to_li
 {
     char from[SHELF_FILE_MAX + 1];
     int i;
+    char to[SHELF_FILE_MAX + 1];
     ascii_copy(from, from_literal);
+    ascii_copy(to, to_literal);
     i = store_local_find(store, from);
     if (i < 0) return STORE_OK;
-    ascii_copy(store->local[i].file, to_literal);
+    if (store_local_find(store, to) >= 0) local_remove(store, from);
+    else strcpy(store->local[i].file, to);
     return save_local(store);
 }

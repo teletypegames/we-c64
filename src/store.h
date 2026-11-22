@@ -54,7 +54,7 @@ int store_local_find(const Store *store, const char *file);
 int store_install(Store *store, unsigned char index, HttpTick tick);
 int store_remove(Store *store, const char *file);
 /* Renames a title in the local list and saves it; a title not in the list
- * changes nothing. Both names are C string literals, as ascii_copy takes. */
+ * changes nothing, and one whose new name is listed already is dropped. Both names are C string literals, as ascii_copy takes. */
 int store_rename_local(Store *store, const char *from_literal, const char *to_literal);
 int store_preview(Store *store, unsigned char index, HttpSink sink, void *context, HttpTick tick);
 
