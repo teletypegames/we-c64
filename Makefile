@@ -15,7 +15,7 @@ DRIVERLIB = $(IP65)/drivers/ip65_c64.lib
 SOURCES = src/main.c src/store.c src/http.c src/shelf.c src/config.c src/crc32.c src/text.c \
           src/disk_cbm.c src/net_uci.c src/net_ip65.c src/net_modem.c src/preview.c
 
-.PHONY: all test vice clean
+.PHONY: all test check vice clean
 
 all: build/we64.prg build/we64.d64
 
@@ -38,6 +38,8 @@ build/we64.d64: build/we64.prg
 
 test:
 	sh scripts/ci-test.sh
+
+check: test
 
 vice: build/we64.d64
 	x64sc -autostart build/we64.d64

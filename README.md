@@ -103,7 +103,7 @@ Auto-detection has to tell apart cards that share the I/O area: a SwiftLink at $
 
 Like every other C64 title of Teletype Games: `.woodpecker/warp.yaml` is a `platform: c64` marker, and the WarpEngine of teletypegames.org serves the pipeline. `build: make` makes its build step run `make we-c64.prg` (cc65, in the `c64-builder` image) instead of assembling `main.asm` with ACME; the rest is the same: `commodore-pack` builds the browser and native players around the PRG, and the version in `metadata.json` (keep `src/version.h` the same) is uploaded and published on a push to master. The C64 shelf then serves it as `WE64.PRG`, so WE64 can update itself: installing it over the running copy replaces the file on the disk; start it again.
 
-`.woodpecker/test.yaml`, the host tests, runs next to it.
+The host tests run in the pipeline's `check` step (`make check`, in the `c64-builder` image).
 
 ## License
 
