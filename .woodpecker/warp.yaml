@@ -1,4 +1,8 @@
 # The CI pipeline is served by the update server: GET /build/config?platform=c64
 # build: make — the build step runs `make we-c64.prg` (cc65) instead of ACME.
+# disable: it needs a network (an Ultimate, a SwiftLink with a modem, an
+# RR-Net), which the web player and the native players do not give it, so there
+# is no web play and no native player package; the program and its docs remain.
 platform: c64
 build: make
+disable: web win_x64 linux_x64 mac_arm64
