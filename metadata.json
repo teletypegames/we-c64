@@ -5,7 +5,7 @@
   "desc": "The Teletype Games store on the C64: lists the C64 directory of archive.teletypegames.org, installs and updates the games over the network (an Ultimate, a SwiftLink with a WiFi modem, or an RR-Net/ETH64 cartridge) and starts them.",
   "license": "MIT",
   "category": "store",
-  "shelf_name": "WE64",
+  "directory_name": "WE64",
   "repo": "https://git.teletypegames.org/stores/we-c64",
   "version": "2.0.0"
 }
