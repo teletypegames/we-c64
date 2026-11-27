@@ -1,6 +1,10 @@
-WE64 is the Teletype Games store on the C64. It reads the C64 shelf of `http://archive.teletypegames.org/C64/`, installs and updates the games on a disk drive, and starts them.
+WE64 is the Teletype Games store on the C64. It reads the C64 directory of `http://archive.teletypegames.org/C64/`, installs and updates the games on a disk drive, and starts them.
 
 **Install:** copy `WE64` from `we-c64-<version>.prg` to a disk or an SD2IEC, and start it with `LOAD"WE64",8,1` and `RUN`. It needs a network: an Ultimate (C64 Ultimate, Ultimate 64, 1541 Ultimate-II+) with the Command Interface turned on, a SwiftLink with a WiFi modem, or an RR-Net or ETH64 cartridge.
+
+**2.0.0**:
+
+- WarpEngine 6.0 calls the shelf a directory, and so does WE64: on the screen ("Reading the directory...", "titles in the directory") and in the source. What it reads is the same `INDEX.TXT`, so it works with an older and a newer engine alike
 
 **1.1.4**:
 

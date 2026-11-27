@@ -1,42 +1,42 @@
 #include <string.h>
-#include "shelf.h"
+#include "directory.h"
 #include "text.h"
 
-void shelf_clear(Shelf *shelf)
+void directory_clear(Directory *dir)
 {
-    shelf->count = 0;
-    shelf->skipped = 0;
-    shelf->line_length = 0;
+    dir->count = 0;
+    dir->skipped = 0;
+    dir->line_length = 0;
 }
 
-static void take_line(Shelf *shelf)
+static void take_line(Directory *dir)
 {
-    shelf->line[shelf->line_length] = 0;
-    if (shelf->line_length == 0 || shelf->line[0] == ASCII_HASH) return;
-    if (shelf->count < SHELF_MAX && shelf_parse_line(shelf->line, &shelf->entries[shelf->count]))
-        ++shelf->count;
+    dir->line[dir->line_length] = 0;
+    if (dir->line_length == 0 || dir->line[0] == ASCII_HASH) return;
+    if (dir->count < DIRECTORY_MAX && directory_parse_line(dir->line, &dir->entries[dir->count]))
+        ++dir->count;
     else
-        ++shelf->skipped;
+        ++dir->skipped;
 }
 
-void shelf_feed(Shelf *shelf, const unsigned char *data, unsigned int length)
+void directory_feed(Directory *dir, const unsigned char *data, unsigned int length)
 {
     unsigned char c;
     while (length--) {
         c = *data++;
         if (c == ASCII_LF) {
-            take_line(shelf);
-            shelf->line_length = 0;
-        } else if (c != ASCII_CR && shelf->line_length < SHELF_LINE_MAX) {
-            shelf->line[shelf->line_length++] = (char)c;
+            take_line(dir);
+            dir->line_length = 0;
+        } else if (c != ASCII_CR && dir->line_length < DIRECTORY_LINE_MAX) {
+            dir->line[dir->line_length++] = (char)c;
         }
     }
 }
 
-void shelf_finish(Shelf *shelf)
+void directory_finish(Directory *dir)
 {
-    if (shelf->line_length > 0) take_line(shelf);
-    shelf->line_length = 0;
+    if (dir->line_length > 0) take_line(dir);
+    dir->line_length = 0;
 }
 
 static const char *field(const char *p, char *out, unsigned int max)
@@ -77,13 +77,13 @@ static int valid_file(const char *file)
     return 1;
 }
 
-static int parse(const char *line, ShelfEntry *entry, unsigned char strict)
+static int parse(const char *line, DirectoryEntry *entry, unsigned char strict)
 {
     char number[12];
     const char *p = line;
     char preview[2];
-    p = field(p, entry->file, SHELF_FILE_MAX);
-    p = field(p, entry->version, SHELF_VERSION_MAX);
+    p = field(p, entry->file, DIRECTORY_FILE_MAX);
+    p = field(p, entry->version, DIRECTORY_VERSION_MAX);
     p = field(p, number, sizeof number - 1);
     if (!parse_number(number, &entry->size, 10)) return 0;
     p = field(p, number, sizeof number - 1);
@@ -91,10 +91,10 @@ static int parse(const char *line, ShelfEntry *entry, unsigned char strict)
         if (strict) return 0;
         entry->crc32 = 0;
     }
-    p = field(p, entry->title, SHELF_TITLE_MAX);
-    p = field(p, entry->author, SHELF_AUTHOR_MAX);
-    p = field(p, entry->description, SHELF_DESC_MAX);
-    p = field(p, entry->category, SHELF_CATEGORY_MAX);
+    p = field(p, entry->title, DIRECTORY_TITLE_MAX);
+    p = field(p, entry->author, DIRECTORY_AUTHOR_MAX);
+    p = field(p, entry->description, DIRECTORY_DESC_MAX);
+    p = field(p, entry->category, DIRECTORY_CATEGORY_MAX);
     field(p, preview, 1);
     entry->preview = preview[0] != 0;
     if (!valid_file(entry->file) || !entry->version[0]) return 0;
@@ -102,12 +102,12 @@ static int parse(const char *line, ShelfEntry *entry, unsigned char strict)
     return 1;
 }
 
-int shelf_parse_line(const char *line, ShelfEntry *entry)
+int directory_parse_line(const char *line, DirectoryEntry *entry)
 {
     return parse(line, entry, 1);
 }
 
-int shelf_parse_local_line(const char *line, ShelfEntry *entry)
+int directory_parse_local_line(const char *line, DirectoryEntry *entry)
 {
     return parse(line, entry, 0);
 }
@@ -138,7 +138,7 @@ static char *put_number(char *p, uint32_t value, unsigned char base)
     return p;
 }
 
-void shelf_format_line(const ShelfEntry *entry, char *line)
+void directory_format_line(const DirectoryEntry *entry, char *line)
 {
     char *p = line;
     p = put_text(p, entry->file);
@@ -152,36 +152,36 @@ void shelf_format_line(const ShelfEntry *entry, char *line)
     *p = 0;
 }
 
-int shelf_find(const Shelf *shelf, const char *file)
+int directory_find(const Directory *dir, const char *file)
 {
     unsigned char i;
-    for (i = 0; i < shelf->count; ++i)
-        if (strcmp(shelf->entries[i].file, file) == 0) return i;
+    for (i = 0; i < dir->count; ++i)
+        if (strcmp(dir->entries[i].file, file) == 0) return i;
     return -1;
 }
 
-int shelf_put(Shelf *shelf, const ShelfEntry *entry)
+int directory_put(Directory *dir, const DirectoryEntry *entry)
 {
-    int i = shelf_find(shelf, entry->file);
+    int i = directory_find(dir, entry->file);
     if (i < 0) {
-        if (shelf->count >= SHELF_MAX) return 0;
-        i = shelf->count++;
+        if (dir->count >= DIRECTORY_MAX) return 0;
+        i = dir->count++;
     }
-    shelf->entries[i] = *entry;
+    dir->entries[i] = *entry;
     return 1;
 }
 
-void shelf_remove(Shelf *shelf, const char *file)
+void directory_remove(Directory *dir, const char *file)
 {
-    int i = shelf_find(shelf, file);
+    int i = directory_find(dir, file);
     if (i < 0) return;
-    --shelf->count;
-    for (; i < shelf->count; ++i) shelf->entries[i] = shelf->entries[i + 1];
+    --dir->count;
+    for (; i < dir->count; ++i) dir->entries[i] = dir->entries[i + 1];
 }
 
-void shelf_disk_name(const char *file, char *name)
+void directory_disk_name(const char *file, char *name)
 {
     unsigned char n = 0;
-    while (*file && *file != ASCII_DOT && n < SHELF_FILE_MAX) name[n++] = *file++;
+    while (*file && *file != ASCII_DOT && n < DIRECTORY_FILE_MAX) name[n++] = *file++;
     name[n] = 0;
 }

@@ -10,8 +10,8 @@ static unsigned char chunk[CHUNK];
 
 /* One line, one entry, one URL and one HTTP result serve every function
  * here: none of them runs inside another. */
-static char line[SHELF_LINE_MAX + 1];
-static ShelfEntry entry;
+static char line[DIRECTORY_LINE_MAX + 1];
+static DirectoryEntry entry;
 static char url[64];
 static HttpResult result;
 
@@ -41,7 +41,7 @@ int store_local_find(const Store *store, const char *file)
     return -1;
 }
 
-static void local_put(Store *store, const ShelfEntry *entry)
+static void local_put(Store *store, const DirectoryEntry *entry)
 {
     int i = store_local_find(store, entry->file);
     if (i < 0) {
@@ -88,16 +88,16 @@ int store_load_local(Store *store)
             c = chunk[i];
             if (c == ASCII_LF || c == ASCII_CR) {
                 line[length] = 0;
-                if (length && shelf_parse_local_line(line, &entry)) local_put(store, &entry);
+                if (length && directory_parse_local_line(line, &entry)) local_put(store, &entry);
                 length = 0;
-            } else if (length < SHELF_LINE_MAX) {
+            } else if (length < DIRECTORY_LINE_MAX) {
                 line[length++] = (char)c;
             }
         }
     }
     disk_close_read();
     line[length] = 0;
-    if (length && shelf_parse_local_line(line, &entry)) local_put(store, &entry);
+    if (length && directory_parse_local_line(line, &entry)) local_put(store, &entry);
     return STORE_OK;
 }
 
@@ -116,7 +116,7 @@ static int save_local(Store *store)
         strcpy(entry.version, store->local[i].version);
         entry.size = store->local[i].size;
         entry.crc32 = store->local[i].crc32;
-        shelf_format_line(&entry, line);
+        directory_format_line(&entry, line);
         if (disk_write((const unsigned char *)line, (unsigned int)strlen(line)) != 0) {
             disk_close_write();
             return STORE_ERR_DISK;
@@ -127,9 +127,9 @@ static int save_local(Store *store)
     return disk_rename(next, name) == 0 ? STORE_OK : STORE_ERR_DISK;
 }
 
-static int shelf_sink(const unsigned char *data, unsigned int length, void *context)
+static int directory_sink(const unsigned char *data, unsigned int length, void *context)
 {
-    shelf_feed((Shelf *)context, data, length);
+    directory_feed((Directory *)context, data, length);
     return 0;
 }
 
@@ -148,9 +148,9 @@ int store_fetch(Store *store, HttpTick tick)
 
     index_name(index, "INDEX.TXT");
     url_of(store, index, url);
-    shelf_clear(&store->remote);
-    error = http_get(store->net, store->config.host, store->config.port, url, shelf_sink, &store->remote, tick, &result);
-    shelf_finish(&store->remote);
+    directory_clear(&store->remote);
+    error = http_get(store->net, store->config.host, store->config.port, url, directory_sink, &store->remote, tick, &result);
+    directory_finish(&store->remote);
     if (error == HTTP_ERR_ABORTED) return STORE_ERR_ABORTED;
     if (error != HTTP_OK) {
         say(store, "Index: ", 0);
@@ -200,12 +200,12 @@ static int disk_sink(const unsigned char *data, unsigned int length, void *conte
 
 int store_install(Store *store, unsigned char index, HttpTick tick)
 {
-    const ShelfEntry *wanted = &store->remote.entries[index];
-    static char name[SHELF_FILE_MAX + 1], temporary[SHELF_FILE_MAX + 5], suffix[5];
+    const DirectoryEntry *wanted = &store->remote.entries[index];
+    static char name[DIRECTORY_FILE_MAX + 1], temporary[DIRECTORY_FILE_MAX + 5], suffix[5];
     static Download download;
     int error;
 
-    shelf_disk_name(wanted->file, name);
+    directory_disk_name(wanted->file, name);
     strcpy(temporary, name);
     ascii_copy(suffix, ".TMP");
     strcat(temporary, suffix);
@@ -256,10 +256,10 @@ int store_install(Store *store, unsigned char index, HttpTick tick)
 
 int store_preview(Store *store, unsigned char index, HttpSink sink, void *context, HttpTick tick)
 {
-    static char name[SHELF_FILE_MAX + 5], suffix[5];
+    static char name[DIRECTORY_FILE_MAX + 5], suffix[5];
     int error;
 
-    shelf_disk_name(store->remote.entries[index].file, name);
+    directory_disk_name(store->remote.entries[index].file, name);
     ascii_copy(suffix, ".PVW");
     strcat(name, suffix);
     url_of(store, name, url);
@@ -275,9 +275,9 @@ int store_preview(Store *store, unsigned char index, HttpSink sink, void *contex
 
 int store_remove(Store *store, const char *file_in_list)
 {
-    char name[SHELF_FILE_MAX + 1], file[SHELF_FILE_MAX + 1];
+    char name[DIRECTORY_FILE_MAX + 1], file[DIRECTORY_FILE_MAX + 1];
     strcpy(file, file_in_list);
-    shelf_disk_name(file, name);
+    directory_disk_name(file, name);
     disk_scratch(name);
     local_remove(store, file);
     if (save_local(store) != STORE_OK) {
@@ -290,9 +290,9 @@ int store_remove(Store *store, const char *file_in_list)
 
 int store_rename_local(Store *store, const char *from_literal, const char *to_literal)
 {
-    char from[SHELF_FILE_MAX + 1];
+    char from[DIRECTORY_FILE_MAX + 1];
     int i;
-    char to[SHELF_FILE_MAX + 1];
+    char to[DIRECTORY_FILE_MAX + 1];
     ascii_copy(from, from_literal);
     ascii_copy(to, to_literal);
     i = store_local_find(store, from);

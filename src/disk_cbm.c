@@ -7,7 +7,7 @@
  * closes every file of the drive, so reading the status of an open file by
  * opening and closing 15 would close the file itself. The DOS commands are written in lower case on
  * purpose: cc65 stores them as unshifted PETSCII, which is what the drive
- * expects. File names are the shelf's ASCII capitals, the same bytes. */
+ * expects. File names are the directory's ASCII capitals, the same bytes. */
 #include <cbm.h>
 #include <string.h>
 #include "disk.h"

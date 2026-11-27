@@ -2,7 +2,7 @@
  *
  *   SERVER_ROOT=<served folder> DISK_DIR=<disk folder> PORT=<port> ./test_store
  *
- * Every scenario writes the shelf it needs into SERVER_ROOT/C64 first. */
+ * Every scenario writes the directory it needs into SERVER_ROOT/C64 first. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +11,7 @@
 #include "../src/crc32.h"
 #include "../src/disk.h"
 #include "../src/http.h"
-#include "../src/shelf.h"
+#include "../src/directory.h"
 #include "../src/store.h"
 
 extern const NetDriver net_posix;
@@ -64,12 +64,12 @@ static unsigned long crc_of(const char *data, size_t length)
 
 static char index_text[4096];
 
-static void shelf_begin(void)
+static void directory_begin(void)
 {
     strcpy(index_text, "#SHELF 1 file|version|size|crc32|title|author|description\n");
 }
 
-static void shelf_add(const char *file, const char *version, const char *data, size_t length, const char *title)
+static void directory_add(const char *file, const char *version, const char *data, size_t length, const char *title)
 {
     char line[512], name[64];
     snprintf(line, sizeof line, "%s|%s|%zu|%08lx|%s|Teletype Games|A test title called %s.\n",
@@ -79,14 +79,14 @@ static void shelf_add(const char *file, const char *version, const char *data, s
     write_file("SERVER_ROOT", name, data, length);
 }
 
-static void shelf_publish(void)
+static void directory_publish(void)
 {
     write_file("SERVER_ROOT", "C64/INDEX.TXT", index_text, strlen(index_text));
 }
 
 static int remote_index(const char *file)
 {
-    return shelf_find(&store.remote, file);
+    return directory_find(&store.remote, file);
 }
 
 static const char game1[] = "\x01\x08game one, version one";
@@ -108,25 +108,25 @@ static void test_config(void)
     CHECK(strcmp(config.dir, "GAMES") == 0 && strcmp(config.net, "ip65") == 0, "DIR as typed, NET lower case");
 }
 
-static void test_shelf_lines(void)
+static void test_directory_lines(void)
 {
-    ShelfEntry entry;
+    DirectoryEntry entry;
     char line[300];
-    printf("shelf lines\n");
-    CHECK(shelf_parse_line("ARIADNE.PRG|1.1.0|10561|e6d8fe00|Thread of Ariadne|Teletype Games|Co-op.", &entry) &&
+    printf("directory lines\n");
+    CHECK(directory_parse_line("ARIADNE.PRG|1.1.0|10561|e6d8fe00|Thread of Ariadne|Teletype Games|Co-op.", &entry) &&
           entry.size == 10561 && entry.crc32 == 0xe6d8fe00UL && strcmp(entry.title, "Thread of Ariadne") == 0,
           "a line of INDEX.TXT");
     CHECK(entry.category[0] == 0 && !entry.preview && strcmp(entry.author, "Teletype Games") == 0,
           "a version 1 line: the author, no category, no preview");
-    CHECK(shelf_parse_line("TRICKSTER-TI.PRG|1.0.0|6593|c4e6bb9f|Trickster Tiles C64|Teletype Games|Hop.|tool|TRICKSTER-TI.PVW",
+    CHECK(directory_parse_line("TRICKSTER-TI.PRG|1.0.0|6593|c4e6bb9f|Trickster Tiles C64|Teletype Games|Hop.|tool|TRICKSTER-TI.PVW",
                            &entry) && strcmp(entry.description, "Hop.") == 0 && strcmp(entry.category, "tool") == 0 && entry.preview,
           "a version 2 line: the category and the preview");
-    CHECK(shelf_parse_line("A.PRG|1|1|00000000|x|y|z||", &entry) && entry.category[0] == 0 && !entry.preview,
+    CHECK(directory_parse_line("A.PRG|1|1|00000000|x|y|z||", &entry) && entry.category[0] == 0 && !entry.preview,
           "a version 2 line without category and preview");
-    CHECK(shelf_parse_line("A.PRG|1|1|00000000|A title of more than thirty-two characters|y|z|game|", &entry) &&
-          strlen(entry.title) == SHELF_TITLE_MAX, "a long title is cut");
-    CHECK(!shelf_parse_line("ariadne.prg|1|1|00000000|x|y|z", &entry), "a lower-case file name is refused");
-    CHECK(!shelf_parse_line("A.PRG|1|ten|00000000|x|y|z", &entry), "a size that is not a number is refused");
+    CHECK(directory_parse_line("A.PRG|1|1|00000000|A title of more than thirty-two characters|y|z|game|", &entry) &&
+          strlen(entry.title) == DIRECTORY_TITLE_MAX, "a long title is cut");
+    CHECK(!directory_parse_line("ariadne.prg|1|1|00000000|x|y|z", &entry), "a lower-case file name is refused");
+    CHECK(!directory_parse_line("A.PRG|1|ten|00000000|x|y|z", &entry), "a size that is not a number is refused");
     strcpy(entry.file, "C64-DEMO.PRG");
     strcpy(entry.version, "1.0.0");
     entry.size = 4641;
@@ -134,16 +134,16 @@ static void test_shelf_lines(void)
     strcpy(entry.title, "Demo");
     strcpy(entry.author, "");
     strcpy(entry.description, "");
-    shelf_format_line(&entry, line);
+    directory_format_line(&entry, line);
     CHECK(strcmp(line, "C64-DEMO.PRG|1.0.0|4641|AF681FFC|Demo||\n") == 0,
           "a local line round-trips");
     entry.crc32 = 0xb759e215UL;
-    shelf_format_line(&entry, line);
+    directory_format_line(&entry, line);
     CHECK(strstr(line, "|B759E215|") != NULL, "a CRC-32 with letters is written in hex capitals");
-    CHECK(!shelf_parse_line("B.PRG|2.2.0|1|l759l215|||", &entry), "a broken CRC-32 is refused on the shelf");
-    CHECK(shelf_parse_local_line("B.PRG|2.2.0|1|l759l215|||", &entry) && strcmp(entry.version, "2.2.0") == 0,
+    CHECK(!directory_parse_line("B.PRG|2.2.0|1|l759l215|||", &entry), "a broken CRC-32 is refused in the directory");
+    CHECK(directory_parse_local_line("B.PRG|2.2.0|1|l759l215|||", &entry) && strcmp(entry.version, "2.2.0") == 0,
           "and read in the local index, the name and version kept");
-    shelf_disk_name("C64-DEMO.PRG", line);
+    directory_disk_name("C64-DEMO.PRG", line);
     CHECK(strcmp(line, "C64-DEMO") == 0, "the disk name drops .PRG");
 }
 
@@ -156,11 +156,11 @@ static void test_store(void)
     strcpy(store.config.host, "127.0.0.1");
     store.config.port = (unsigned int)atoi(getenv("PORT"));
 
-    shelf_begin();
-    shelf_add("GAMEONE.PRG", "1.0.0", game1, sizeof game1 - 1, "Game One");
-    shelf_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
+    directory_begin();
+    directory_add("GAMEONE.PRG", "1.0.0", game1, sizeof game1 - 1, "Game One");
+    directory_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
     strcat(index_text, "BROKEN LINE\n");
-    shelf_publish();
+    directory_publish();
 
     CHECK(store_fetch(&store, 0) == STORE_OK, "the index is fetched");
     CHECK(store.remote.count == 2 && store.remote.skipped == 1, "two titles, the broken line skipped");
@@ -179,18 +179,18 @@ static void test_store(void)
     CHECK(store_load_local(&store) == STORE_OK && store.local_count == 1 && strcmp(store.local[0].version, "1.0.0") == 0,
           "WE64.IDX remembers it");
 
-    shelf_begin();
-    shelf_add("GAMEONE.PRG", "1.1.0", game1b, sizeof game1b - 1, "Game One");
-    shelf_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
-    shelf_publish();
+    directory_begin();
+    directory_add("GAMEONE.PRG", "1.1.0", game1b, sizeof game1b - 1, "Game One");
+    directory_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
+    directory_publish();
     store_fetch(&store, 0);
     CHECK(store_state(&store, "GAMEONE.PRG", "1.1.0") == STATE_UPDATE, "a new version is an update");
     CHECK(store_install(&store, (unsigned char)remote_index("GAMEONE.PRG"), 0) == STORE_OK &&
           file_equals("DISK_DIR", "GAMEONE", game1b, sizeof game1b - 1), "the update replaces it");
 
-    shelf_begin();
-    shelf_add("GAMEONE.PRG", "1.2.0", game1b, sizeof game1b - 1, "Game One");
-    shelf_publish();
+    directory_begin();
+    directory_add("GAMEONE.PRG", "1.2.0", game1b, sizeof game1b - 1, "Game One");
+    directory_publish();
     write_file("SERVER_ROOT", "C64/GAMEONE.PRG", game1, sizeof game1 - 1);
     store_fetch(&store, 0);
     CHECK(store_install(&store, (unsigned char)remote_index("GAMEONE.PRG"), 0) == STORE_ERR_CHECK,
@@ -199,19 +199,19 @@ static void test_store(void)
           "and the installed version stays, no TMP left");
     CHECK(store_state(&store, "GAMEONE.PRG", "1.2.0") == STATE_UPDATE, "still offered as an update");
 
-    shelf_begin();
-    shelf_add("GAMEONE.PRG", "1.1.0", game1b, sizeof game1b - 1, "Game One");
+    directory_begin();
+    directory_add("GAMEONE.PRG", "1.1.0", game1b, sizeof game1b - 1, "Game One");
     strcat(index_text, "MISSING.PRG|1.0.0|10|00000000|Missing|x|y\n");
-    shelf_publish();
+    directory_publish();
     store_fetch(&store, 0);
     CHECK(store_install(&store, (unsigned char)remote_index("MISSING.PRG"), 0) == STORE_ERR_NETWORK &&
           file_size("DISK_DIR", "MISSING") < 0 && file_size("DISK_DIR", "MISSING.TMP") < 0,
           "a 404 installs nothing");
 
     setenv("DISK_FULL_AFTER", "4", 1);
-    shelf_begin();
-    shelf_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
-    shelf_publish();
+    directory_begin();
+    directory_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
+    directory_publish();
     store_fetch(&store, 0);
     CHECK(store_install(&store, (unsigned char)remote_index("GAMETWO.PRG"), 0) == STORE_ERR_DISK &&
           file_size("DISK_DIR", "GAMETWO") < 0 && strstr(store.message, "DISK FULL") != 0,
@@ -275,10 +275,10 @@ static void test_preview(void)
     store.net = &net_posix;
     strcpy(store.config.host, "127.0.0.1");
     store.config.port = (unsigned int)atoi(getenv("PORT"));
-    shelf_begin();
-    shelf_add("GAMEONE.PRG", "1.0.0", game1, sizeof game1 - 1, "Game One");
-    shelf_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
-    shelf_publish();
+    directory_begin();
+    directory_add("GAMEONE.PRG", "1.0.0", game1, sizeof game1 - 1, "Game One");
+    directory_add("GAMETWO.PRG", "2.0.0", game2, sizeof game2 - 1, "Game Two");
+    directory_publish();
     write_file("SERVER_ROOT", "C64/GAMEONE.PVW", picture, sizeof picture - 1);
     store_fetch(&store, 0);
     memset(&collected, 0, sizeof collected);
@@ -315,7 +315,7 @@ int main(void)
 {
     crc32_init();
     test_config();
-    test_shelf_lines();
+    test_directory_lines();
     test_store();
     test_preview();
     test_http();

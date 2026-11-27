@@ -1,7 +1,7 @@
 #!/bin/sh
-# The host tests: the portable layers (shelf, config, http, store) built with the
+# The host tests: the portable layers (dir, config, http, store) built with the
 # system C compiler against a socket driver and a folder for a disk, talking to a
-# small HTTP/1.0 server (host/server.py) that serves a shelf the tests write.
+# small HTTP/1.0 server (host/server.py) that serves a directory the tests write.
 #
 #   scripts/ci-test.sh
 set -eu
@@ -13,7 +13,7 @@ mkdir -p "$WORK/server/C64" "$WORK/disk"
 
 "$CC" -std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200112L -o "$WORK/test_store" \
   host/test_store.c host/net_posix.c host/disk_posix.c \
-  src/config.c src/crc32.c src/http.c src/shelf.c src/store.c src/text.c
+  src/config.c src/crc32.c src/http.c src/directory.c src/store.c src/text.c
 
 PORT="${PORT:-18064}"
 python3 host/server.py "$WORK/server" "$PORT" &

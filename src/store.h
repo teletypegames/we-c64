@@ -1,4 +1,4 @@
-/* The store: the shelf on the server, what is installed here, and the three
+/* The store: the directory on the server, what is installed here, and the three
  * things to do with a title.
  *
  * Installing writes the download to NAME.TMP, checks its size and CRC-32
@@ -11,13 +11,13 @@
 #include "config.h"
 #include "http.h"
 #include "net.h"
-#include "shelf.h"
+#include "directory.h"
 
 #define LOCAL_MAX 24
 
 typedef struct {
-    char file[SHELF_FILE_MAX + 1];
-    char version[SHELF_VERSION_MAX + 1];
+    char file[DIRECTORY_FILE_MAX + 1];
+    char version[DIRECTORY_VERSION_MAX + 1];
     uint32_t size;
     uint32_t crc32;
 } LocalEntry;
@@ -25,7 +25,7 @@ typedef struct {
 typedef struct {
     Config config;
     const NetDriver *net;
-    Shelf remote;
+    Directory remote;
     LocalEntry local[LOCAL_MAX];
     unsigned char local_count;
     char message[48];

@@ -1,10 +1,10 @@
 /* WE64: the Teletype Games store on the C64.
  *
- * The list is the shelf on the server (INDEX.TXT) beside what is installed
+ * The list is the directory on the server (INDEX.TXT) beside what is installed
  * here (WE64.IDX); RETURN installs or updates, R runs, DEL removes, U
  * updates every title, SPACE shows the details of one, P its preview, C
- * narrows the list to one category, F1 reads the shelf again. At start a new
- * WE64 on the shelf is offered. Running a title leaves WE64 the old
+ * narrows the list to one category, F1 reads the directory again. At start a new
+ * WE64 in the directory is offered. Running a title leaves WE64 the old
  * way: LOAD and RUN on the screen, two RETURNs in the keyboard buffer. */
 #include <cbm.h>
 #include <conio.h>
@@ -56,13 +56,13 @@ typedef struct {
 } Row;
 
 static Store store;
-static Row rows[SHELF_MAX + LOCAL_MAX];
+static Row rows[DIRECTORY_MAX + LOCAL_MAX];
 static unsigned char row_count;
 static unsigned char selected;
 static unsigned char first;
 static unsigned char online;
 static unsigned char device;
-static char categories[CATEGORY_SLOTS][SHELF_CATEGORY_MAX + 1];
+static char categories[CATEGORY_SLOTS][DIRECTORY_CATEGORY_MAX + 1];
 static unsigned char category_count;
 static unsigned char filter;
 
@@ -147,7 +147,7 @@ static void build_rows(void)
     }
     for (i = 0; i < store.local_count; ++i) {
         if (filter) break;
-        if (shelf_find(&store.remote, store.local[i].file) >= 0) continue;
+        if (directory_find(&store.remote, store.local[i].file) >= 0) continue;
         rows[row_count].kind = ROW_LOCAL;
         rows[row_count++].index = i;
     }
@@ -270,7 +270,7 @@ static void draw_all(void)
     draw_list();
     if (!row_count) {
         gotoxy(1, LIST_TOP + 1);
-        cputs(online ? "The shelf is empty." : "Nothing installed, and no network.");
+        cputs(online ? "The directory is empty." : "Nothing installed, and no network.");
     }
     draw_help();
 }
@@ -389,7 +389,7 @@ static void reload(void)
     load_local();
     store.remote.count = 0;
     if (online) {
-        message("Reading the shelf...");
+        message("Reading the directory...");
         last_shown = 0;
         if (store_fetch(&store, tick) != STORE_OK) {
             build_rows();
@@ -406,7 +406,7 @@ static void reload(void)
         gotoxy(0, MESSAGE_ROW);
         textcolor(COLOR_GRAY2);
         show_count(store.remote.count);
-        cputs(" titles on the shelf");
+        cputs(" titles in the directory");
         textcolor(COLOR_GRAY3);
     }
 }
@@ -432,10 +432,10 @@ static void put_screen_line(unsigned char row, const char *ascii_text)
 
 static void launch(const char *file)
 {
-    char name[SHELF_FILE_MAX + 1];
+    char name[DIRECTORY_FILE_MAX + 1];
     char line[40];
     char number[4];
-    shelf_disk_name(file, name);
+    directory_disk_name(file, name);
     line[0] = 0x4C;
     line[1] = 0x4F;
     line[2] = 0x41;
@@ -480,7 +480,7 @@ static void launch(const char *file)
     exit(0);
 }
 
-/* Installs shelf entry +index+, showing the progress on the message row;
+/* Installs directory entry +index+, showing the progress on the message row;
  * returns the STORE_ code. */
 static int install(unsigned char index)
 {
@@ -521,7 +521,7 @@ static void put_wrapped(const char *text, unsigned char line)
 
 static void draw_info(unsigned char index)
 {
-    const ShelfEntry *entry = &store.remote.entries[index];
+    const DirectoryEntry *entry = &store.remote.entries[index];
     int local = store_local_find(&store, entry->file);
     clrscr();
     draw_header();
@@ -562,14 +562,14 @@ static int show_preview(unsigned char index)
 {
     if (!online) return STORE_ERR_NETWORK;
     if (!store.remote.entries[index].preview) {
-        ascii_copy(store.message, "No preview on the shelf");
+        ascii_copy(store.message, "No preview in the directory");
         return STORE_ERR_CHECK;
     }
     message("Loading the preview...");
     return preview_show(&store, index);
 }
 
-/* The details of shelf entry +index+, until a key other than its own. */
+/* The details of directory entry +index+, until a key other than its own. */
 static void info(unsigned char index)
 {
     char c;
@@ -599,7 +599,7 @@ static int is_self(const char *file)
     return strcmp(file, name) == 0;
 }
 
-/* Every title with a newer version on the shelf, WE64 itself left out:
+/* Every title with a newer version in the directory, WE64 itself left out:
  * that one is offered at start. RUN/STOP stops the round. */
 static void update_all(void)
 {
@@ -623,7 +623,7 @@ static void update_all(void)
     cputs(done == 1 ? " title updated" : " titles updated");
 }
 
-/* A WE64 on the shelf other than this one is offered; once installed,
+/* A WE64 in the directory other than this one is offered; once installed,
  * it is started in place of this one. */
 static void offer_self_update(void)
 {

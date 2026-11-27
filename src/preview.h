@@ -1,4 +1,4 @@
-/* The preview of a title: NAME.PVW from the shelf, a C64 bitmap shown on the
+/* The preview of a title: NAME.PVW from the directory, a C64 bitmap shown on the
  * whole screen until a key is pressed.
  *
  *   byte 0       mode: 0 hires, 1 multicolor
@@ -16,7 +16,7 @@
 
 #include "store.h"
 
-/* Downloads and shows the preview of shelf entry +index+; returns a STORE_
+/* Downloads and shows the preview of directory entry +index+; returns a STORE_
  * code. The screen is left in bitmap mode only while it is shown; the
  * caller redraws the text screen afterwards. */
 int preview_show(Store *store, unsigned char index);
